@@ -67,7 +67,7 @@ test("Child Benefit charge is 1% for each £200 over £60,000", () => {
 
 test("deductions after tax reduce take-home and nothing else", () => {
   const base = calc({ salary: 30000 });
-  const C = calc({ salary: 30000, post: [{ name: "Union", amount: 20, basis: "monthly", from: 1, to: 12 }] });
+  const C = calc({ salary: 30000, post: [{ name: "Union", amount: 20, basis: "monthly" }] });
   near(C.R.sum("tax"), base.R.sum("tax"), "tax");
   near(C.net, base.net - 240, "take-home");
 });
@@ -115,6 +115,15 @@ test("income is the pot times the income rate, plus the State Pension when inclu
   assert.equal(P.spFrom, 67);
   const off = pot({ ppAge: 50, ppRetire: 60, ppPot: 200000, ppGrowth: 0, spOn: false }, 0);
   near(off.total, 7000, "total without State Pension");
+});
+
+test("Cycle to Work entered as a yearly amount is spread over the whole tax year", () => {
+  const base = calc({ salary: 30000, eePct: 0, erPct: 0 });
+  const C = calc({ salary: 30000, eePct: 0, erPct: 0, sac: [{ name: "Cycle to Work", amount: 1200, basis: "yearly" }] });
+  near(C.R.sum("sch"), 1200, "sacrificed in the year");
+  near(C.R.rows[0].sch, 100, "sacrificed each month");
+  // saves 20% tax and 8% NI on the 1,200
+  near(C.net, base.net - 1200 * (1 - 0.28), "take-home");
 });
 
 test("the page keeps its promise: nothing stored, nothing sent, nothing loaded from elsewhere", () => {

@@ -344,21 +344,20 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <div class="fg">
     <div><label for="bonusValue">Bonus</label><input id="bonusValue" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" placeholder="0"></div>
     <div><span class="lbl" id="btLbl">Entered as</span><div class="seg" role="group" aria-labelledby="btLbl"><button type="button" id="btAmount">£ amount</button><button type="button" id="btPct">% of salary</button></div></div>
-    <div><label for="bonusMonth">Paid in</label><select id="bonusMonth"></select></div>
-    <div><label for="bsType">Bonus into pension</label><select id="bsType"><option value="none">None, all cash</option><option value="pct">A % of the bonus</option><option value="amount">A £ amount</option><option value="target">To leave a set take-home</option></select></div>
+    <div class="full"><label for="bsType">Bonus into pension</label><select id="bsType"><option value="none">None, all cash</option><option value="pct">A % of the bonus</option><option value="amount">A £ amount</option><option value="target">To leave a set take-home</option></select></div>
     <div class="full" id="bsValWrap" hidden><label for="bsValue" id="bsValLbl">Amount</label><input id="bsValue" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" placeholder="0"></div>
   </div>
   <dl class="kv" id="bonusKv"></dl><p class="note" id="bonusNote"></p><p class="status" id="status"></p>
 </div></dialog>
 
 <dialog class="sheet" id="shSac" aria-labelledby="shSacT"><header><h2 id="shSacT">Salary sacrifice</h2><button type="button" class="done">Done</button></header><div class="body">
-  <p class="note" style="margin-top:0">Cycle to Work and other schemes taken from pay before tax and NI. Enter each as a monthly or a yearly amount.</p>
+  <p class="note" style="margin-top:0">Cycle to Work and other schemes taken from pay before tax and NI. Enter each as a monthly or a yearly amount. Each one applies to the whole of the tax year selected.</p>
   <div id="sacList"></div>
   <div class="row" style="margin-top:.9rem"><button type="button" class="btn" id="addC2W">Add Cycle to Work</button><button type="button" class="btn" id="addSac">Add other salary sacrifice</button></div>
 </div></dialog>
 
 <dialog class="sheet" id="shPost" aria-labelledby="shPostT"><header><h2 id="shPostT">Deductions after tax</h2><button type="button" class="done">Done</button></header><div class="body">
-  <p class="note" style="margin-top:0">Savings schemes, share plans, union fees and similar. These reduce take-home but do not change tax or NI.</p>
+  <p class="note" style="margin-top:0">Savings schemes, share plans, union fees and similar. These reduce take-home but do not change tax or NI. Each one applies to the whole of the tax year selected.</p>
   <div id="postList"></div>
   <div class="row" style="margin-top:.9rem"><button type="button" class="btn" id="addPost">Add a deduction</button></div>
 </div></dialog>
@@ -377,7 +376,6 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
 
 <dialog class="sheet" id="shMore" aria-labelledby="shMoreT"><header><h2 id="shMoreT">More options</h2><button type="button" class="done">Done</button></header><div class="body">
   <div class="fg">
-    <div class="full"><label for="viewMonth">Month shown on the main screen</label><select id="viewMonth"></select></div>
     <div><label for="risePct">Pay rise in year %</label><input id="risePct" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" placeholder="0"></div>
     <div><label for="riseFrom">Pay rise starts</label><select id="riseFrom"></select></div>
     <div><label for="bik">Taxable benefits £/month</label><input id="bik" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" placeholder="0"></div>
@@ -440,7 +438,7 @@ const monthsFor=y=>["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan",
 let MONTHS=monthsFor("2027");
 const blank=()=>({region:"eng",salary:null,pensionMode:"pct",eePct:5,erPct:3,netTarget:null,method:"sacrifice",
   bonusType:"amount",bonusValue:null,bonusMonth:12,bsType:"none",bsValue:null,
-  viewMonth:null,risePct:null,riseFrom:1,bik:null,allowance:12570,loan:"",pg:"0",children:null,sac:[],post:[],year:"2027",ppView:null,
+  risePct:null,riseFrom:1,bik:null,allowance:12570,loan:"",pg:"0",children:null,sac:[],post:[],year:"2027",ppView:null,
   // pension pot screen: cautious defaults
   ppAge:null,ppRetire:67,ppPot:null,ppMonthly:null,ppGrowth:2,ppDraw:3.5,spOn:true,spWeekly:241.30,spAge:67});
 let S=blank();   // held in memory only: never written to storage
@@ -452,7 +450,6 @@ const gbpShort=x=>Math.abs(x)>=1e6?(x<0?"−":"")+"£"+(Math.abs(x)/1e6).toFixed
 const bands=s=>s.region==="sco"?Y(s).sco:RUK;
 function taxCum(b,x,n){let t=0;for(let i=0;i<b.length;i++){const lo=b[i][0]*n/12,step=b[i][1]-(i?b[i-1][1]:0);if(x>lo)t+=step*(x-lo);}return t;}
 const perMonth=it=>it.basis==="yearly"?v(it.amount)/12:v(it.amount);
-const inRange=(it,n)=>n>=it.from&&n<=it.to;
 const bonusGross=s=>s.bonusType==="pct"?v(s.salary)*v(s.bonusValue)/100:v(s.bonusValue);
 
 function run(s,pct,bs){
@@ -462,8 +459,8 @@ function run(s,pct,bs){
     const basic=v(s.salary)/12*(v(s.risePct)&&n>=s.riseFrom?1+v(s.risePct)/100:1);
     const pen=basic*pct/100;
     let sch=0,post=0;
-    for(const it of s.sac)if(inRange(it,n))sch+=perMonth(it);
-    for(const it of s.post)if(inRange(it,n))post+=perMonth(it);
+    for(const it of s.sac)sch+=perMonth(it);
+    for(const it of s.post)post+=perMonth(it);
     const bonus=n===+s.bonusMonth?bg:0,bsac=n===+s.bonusMonth?bs:0;
     const sacPen=s.method==="sacrifice"?pen:0;
     const cash=Math.max(0,basic-sacPen-sch+bonus-bsac);           // pay subject to NI
@@ -549,7 +546,7 @@ function potCalc(s,monthly){
 /* ---------- interface ---------- */
 const $=id=>document.getElementById(id);
 const NUM=["salary","eePct","erPct","netTarget","bonusValue","bsValue","risePct","bik","allowance","children","ppAge","ppRetire","ppPot","ppMonthly","ppGrowth","ppDraw","spWeekly","spAge"];
-const SEL=["region","method","bonusMonth","bsType","riseFrom","loan","pg","year"];
+const SEL=["region","method","bsType","riseFrom","loan","pg","year"];
 let TAB="pay",FROM_PAY=0,PAY_C=null,POT=null;
 const monthOpts=(sel,val)=>{sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}"${i+1==val?" selected":""}>${m}</option>`).join("");};
 const setSeg=(a,b,on)=>{$(a).setAttribute("aria-pressed",on);$(b).setAttribute("aria-pressed",!on);};
@@ -560,7 +557,7 @@ const readNum=id=>{const x=parseFloat(MONEY.includes(id)?$(id).value.replace(/[^
 function syncForm(){
   MONTHS=monthsFor(S.year);
   NUM.forEach(id=>{$(id).value=show(id);});
-  monthOpts($("bonusMonth"),S.bonusMonth);monthOpts($("riseFrom"),S.riseFrom);monthOpts($("viewMonth"),1);
+  monthOpts($("riseFrom"),S.riseFrom);
   ["region","method","bsType","loan","pg","year"].forEach(id=>{$(id).value=S[id];});
   setSeg("pmPct","pmTarget",S.pensionMode==="pct");
   setSeg("btAmount","btPct",S.bonusType==="amount");
@@ -572,7 +569,7 @@ function bind(){
   // on the main screen, tapping a field selects its contents so a new figure replaces the old one, and Done closes the keyboard
   document.querySelectorAll(".stepper input").forEach(el=>el.addEventListener("focus",()=>el.select()));
   document.querySelectorAll("input").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")el.blur();}));
-  SEL.forEach(id=>$(id).addEventListener("change",()=>{const x=$(id).value;S[id]=(id==="bonusMonth"||id==="riseFrom")?+x:x;if(id==="year")syncForm();else update();}));
+  SEL.forEach(id=>$(id).addEventListener("change",()=>{const x=$(id).value;S[id]=id==="riseFrom"?+x:x;if(id==="year")syncForm();else update();}));
   document.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.step;
     // an empty age starts at 40, and an empty monthly payment starts from the figure taken from the Take-home screen
     const from=S[id]!=null?S[id]:id==="ppAge"?40- +b.dataset.d:id==="ppMonthly"?Math.round(FROM_PAY):0;
@@ -598,11 +595,10 @@ function bind(){
   $("pmTarget").addEventListener("click",()=>{S.pensionMode="target";syncForm();});
   $("btAmount").addEventListener("click",()=>{S.bonusType="amount";syncForm();});
   $("btPct").addEventListener("click",()=>{S.bonusType="pct";syncForm();});
-  $("addC2W").addEventListener("click",()=>{S.sac.push({name:"Cycle to Work",amount:null,basis:"yearly",from:1,to:12});renderList("sac");update();});
-  $("addSac").addEventListener("click",()=>{S.sac.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("sac");update();});
-  $("addPost").addEventListener("click",()=>{S.post.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("post");update();});
+  $("addC2W").addEventListener("click",()=>{S.sac.push({name:"Cycle to Work",amount:null,basis:"yearly"});renderList("sac");update();});
+  $("addSac").addEventListener("click",()=>{S.sac.push({name:"",amount:null,basis:"monthly"});renderList("sac");update();});
+  $("addPost").addEventListener("click",()=>{S.post.push({name:"",amount:null,basis:"monthly"});renderList("post");update();});
   $("reset").addEventListener("click",()=>{S=blank();syncForm();});
-  $("viewMonth").addEventListener("change",e=>{S.viewMonth=+e.target.value;update();});
   $("optBtn").addEventListener("click",()=>{
     if(S.pensionMode==="target"){if(v(S.salary)>0&&v(S.netTarget)>0)S.eePct=Math.round(compute(S).pct*10)/10;S.pensionMode="pct";syncForm();return;}
     if(!(v(S.netTarget)>0)){needTarget(true);$("netTarget").focus();return;}
@@ -619,17 +615,13 @@ function renderList(key){
       <div><label for="${p}a">Amount £</label><input id="${p}a" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="${it.amount==null?"":it.amount}"></div>
       <div><span class="lbl" id="${p}bl">Amount is</span><div class="seg" role="group" aria-labelledby="${p}bl">
         <button type="button" id="${p}m" aria-pressed="${it.basis==="monthly"}">Monthly</button><button type="button" id="${p}y" aria-pressed="${it.basis==="yearly"}">Yearly</button></div></div>
-      <div><label for="${p}f">From</label><select id="${p}f"></select></div>
-      <div><label for="${p}t">To</label><select id="${p}t"></select></div>
       <div class="row full"><span class="note" style="margin:0" id="${p}e"></span><button type="button" class="btn small" id="${p}r">Remove</button></div>`;
     box.appendChild(d);
-    $(p+"n").value=it.name;monthOpts($(p+"f"),it.from);monthOpts($(p+"t"),it.to);
+    $(p+"n").value=it.name;
     $(p+"n").addEventListener("input",e=>{it.name=e.target.value;});
     $(p+"a").addEventListener("input",e=>{const x=parseFloat(e.target.value);it.amount=isNaN(x)?null:x;update();});
     $(p+"m").addEventListener("click",()=>{it.basis="monthly";renderList(key);update();});
     $(p+"y").addEventListener("click",()=>{it.basis="yearly";renderList(key);update();});
-    $(p+"f").addEventListener("change",e=>{it.from=+e.target.value;update();});
-    $(p+"t").addEventListener("change",e=>{it.to=+e.target.value;update();});
     $(p+"r").addEventListener("click",()=>{S[key].splice(i,1);renderList(key);update();});
   });
 }
@@ -730,12 +722,10 @@ function drawScale(C){
 }
 function updatePay(){
   const has=v(S.salary)>0,target=S.pensionMode==="target";
-  const vm=S.viewMonth||(bonusGross(S)>0?+S.bonusMonth:1);$("viewMonth").value=vm;
   $("bsValWrap").hidden=S.bsType==="none";
   $("bsValLbl").textContent=S.bsType==="pct"?"% of the bonus into pension":S.bsType==="amount"?"£ of the bonus into pension":"Bonus take-home you want £";
-  for(const key of ["sac","post"])S[key].forEach((it,i)=>{const el=$(key+i+"e");if(!el)return;const m=Math.max(0,it.to-it.from+1);
-    el.textContent=`${gbp(perMonth(it),2)} a month for ${m} month${m===1?"":"s"}: ${gbp(perMonth(it)*m,2)} in the year`;});
-  const sacTot=S.sac.reduce((a,it)=>a+perMonth(it)*Math.max(0,it.to-it.from+1),0),postTot=S.post.reduce((a,it)=>a+perMonth(it)*Math.max(0,it.to-it.from+1),0);
+  for(const key of ["sac","post"])S[key].forEach((it,i)=>{const el=$(key+i+"e");if(el)el.textContent=`${gbp(perMonth(it),2)} a month, ${gbp(perMonth(it)*12,2)} in the tax year`;});
+  const sacTot=S.sac.reduce((a,it)=>a+perMonth(it)*12,0),postTot=S.post.reduce((a,it)=>a+perMonth(it)*12,0);
   chip("cBonus",bonusGross(S)?gbp(bonusGross(S)):"add",bonusGross(S));
   chip("cSac",sacTot?gbp(sacTot)+"/yr":"C2W etc",sacTot);
   chip("cPost",postTot?gbp(postTot)+"/yr":"add",postTot);
@@ -767,9 +757,11 @@ function updatePay(){
     if(!C.pm){pr.textContent="Enter the monthly take-home you want.";pr.className="status";}
     else{pr.textContent=C.pm.msg||`Pension needed: ${C.pct.toFixed(1)}% of salary, about ${gbp(eePen/12)} a month.`;pr.className="status"+(C.pm.warn?" warn":"");}
   }else pr.textContent="";
-  const mr=R.rows[vm-1],isB=R.bg>0&&vm===+S.bonusMonth;
+  // The main figure is a normal month: the average of the months without the bonus. The bonus is shown beside it.
+  const normal=R.rows.filter(r=>!(R.bg>0&&r.n===+S.bonusMonth)),mr={};
+  for(const k of ["net","tax","ni","sacPen","netpayPen","rasNet","bsac","sch","loan","post"])mr[k]=normal.reduce((a,r)=>a+r[k],0)/normal.length;
   $("oNet").textContent=gbp(mr.net,2);
-  $("oMonth").textContent=`${MONTHS[vm-1]}${isB?" with bonus":""} · ${gbp(C.net)} a year`;
+  $("oMonth").textContent=(R.bg>0?`+ ${gbp(C.bonusNet)} bonus`:v(S.risePct)?"average month":"a month")+` · ${gbp(C.net)} a year`;
   const yourPen=eePen+bsac,other=sch+loan+post;
   const parts=[["net","Take-home",mr.net],["tax","Income tax",mr.tax],["ni","National Insurance",mr.ni],["pen","Your pension",mr.sacPen+mr.netpayPen+mr.rasNet+mr.bsac],["oth","Other deductions",mr.sch+mr.loan+mr.post]]
     .filter(p=>p[2]>0.5).map(([k,t,a])=>({k,t,a}));
@@ -786,7 +778,7 @@ function updatePay(){
   $("e3").textContent=gbp(C.keep,0);$("e4").textContent=gbpShort(penAll);
   const st=$("status");st.textContent=C.bsol.msg||"";st.className="status"+(C.bsol.warn?" warn":"");
   $("bonusKv").innerHTML=R.bg?kv([["Bonus before deductions",gbp(R.bg,2)],R.bs?["Into pension",gbp(R.bs,2)]:null,["Tax, NI and other deductions on it",gbp(R.bg-R.bs-C.bonusNet,2)],["Bonus take-home",gbp(C.bonusNet,2),1],["Share of the bonus kept",pc(C.bonusNet/R.bg)]]):"";
-  $("bonusNote").textContent=R.bg?"Take-home is the extra pay over the year compared with having no bonus. The bonus month payslip is on the main screen.":"Enter a bonus as an amount or as a % of salary to see what it pays after deductions.";
+  $("bonusNote").textContent=R.bg?"Take-home is the extra pay over the year compared with having no bonus. The main screen shows a normal month without it; the Detail table shows it in the last month of the tax year.":"Enter a bonus as an amount or as a % of salary to see what it pays after deductions.";
   $("penKv").innerHTML=kv([
     [`Your contributions from salary (${C.pct.toFixed(1)}%)`,gbp(eePen)],
     bsac?["From your bonus",gbp(bsac)]:null,
