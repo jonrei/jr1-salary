@@ -2,11 +2,21 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Take-Home Pay Calculator</title>
-<meta name="description" content="UK take-home pay calculator for 2027/28. Works in your browser; nothing is saved or sent.">
-<meta name="theme-color" content="#0f6b4f">
+<meta name="description" content="UK take-home pay calculator for 2027/28. See your pay after tax, National Insurance, pension and other deductions. Works in your browser; nothing is saved or sent.">
+<!-- The page may load only its own fonts, icons and manifest, and may not send data anywhere. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#f3f5f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1513" media="(prefers-color-scheme: dark)">
+<meta property="og:title" content="Take-Home Pay Calculator">
+<meta property="og:description" content="UK pay after tax, National Insurance, pension and other deductions for 2027/28. Nothing is saved or sent.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://salary.jr1.com/">
+<link rel="canonical" href="https://salary.jr1.com/">
+<link rel="manifest" href="site.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/ibm-plex-mono-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -18,12 +28,12 @@
 @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
 @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
 :root{
-  /* Layout: one fixed phone screen, no page scroll. Inputs, chips, donut, month bars, pension bar, four stats. Extras open as panels. */
-  --bg:#f3f5f4; --surface:#ffffff; --ink:#16211d; --muted:#5c6b65; --line:#d6ddda;
-  --accent:#0f6b4f; --accent-soft:#e1f0ea; --warn:#a4560c; --warn-soft:#fbeedd; --good:#1f7a3a;
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#16211d; --muted:#56655f; --line:#d6ddda;
+  --accent:#0f6b4f; --accent-soft:#e1f0ea; --warn:#8f4a08; --warn-soft:#fbeedd; --good:#17643a;
   --tax:#b4553a; --ni:#c79a2b; --pen:#3f6fb0; --oth:#8a8f93; --on-accent:#ffffff;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --field:max(16px,1.1rem); /* 16px or more stops phones zooming in when a field is tapped */
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
@@ -40,173 +50,196 @@
   --tax:#e08a6f; --ni:#e0bb55; --pen:#7fa6de; --oth:#7d8a86; --on-accent:#0f1513;
   color-scheme:dark;
 }
+/* One fixed phone screen, no page scroll.
+   Every size below is in rem, and 1rem is set from the screen so the whole page is 30rem wide and 53.4rem tall:
+   12px on a 360 x 640 screen, larger on bigger phones, smaller on shorter ones. The main screen must fit in that box. */
+html{font-size:12px;font-size:clamp(10px,min(1.873vh,3.333vw),16px);font-size:clamp(10px,min(1.873dvh,3.333vw),16px);-webkit-text-size-adjust:100%;text-size-adjust:100%}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:12px;line-height:1.3}
-#app{height:100%;max-width:480px;margin:0 auto;padding:6px 16px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
-.top{display:flex;align-items:baseline;gap:8px;flex:none}
-h1{font-size:13px;font-weight:700;margin:0;white-space:nowrap}
-.yr{color:var(--muted);font-size:10.5px;white-space:nowrap}
-.priv{margin-left:auto;font-size:10px;color:var(--good);background:var(--accent-soft);border-radius:99px;padding:1px 7px;white-space:nowrap}
-.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0;flex:none}
-.g2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:6px}
-.g2 + .g2{margin-top:5px}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1rem;line-height:1.3;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{height:100vh;height:100dvh;width:100%;max-width:30rem;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;gap:.42rem;overflow-x:hidden;overflow-y:auto;
+  padding:max(.6rem,env(safe-area-inset-top)) max(1.2rem,env(safe-area-inset-right)) max(.6rem,env(safe-area-inset-bottom)) max(1.2rem,env(safe-area-inset-left))}
+.top{display:flex;align-items:center;gap:.6rem;flex:none}
+h1{font-size:1.3rem;font-weight:700;margin:0;white-space:nowrap;letter-spacing:-.01em}
+.yr{color:var(--muted);font-size:.95rem;white-space:nowrap}
+.priv{margin-left:auto;font-size:.85rem;font-weight:500;color:var(--good);background:var(--accent-soft);border-radius:99px;padding:.15rem .7rem;white-space:nowrap}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:.8rem;padding:.5rem .75rem;min-width:0;flex:none}
+.g2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:.6rem}
+.g2 + .g2{margin-top:.4rem}
 .g2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-label,.lbl{display:block;font-size:9.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-input,select{font:inherit;color:var(--ink);background:var(--surface);min-width:0}
-.stepper{display:flex;border:1.5px solid var(--accent);border-radius:6px;overflow:hidden;height:28px}
-.stepper button{flex:0 0 24px;border:0;background:var(--accent-soft);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;padding:0}
+label,.lbl{display:block;font-size:.85rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+input,select,button{font:inherit;color:var(--ink)}
+input,select{background:var(--surface);min-width:0}
+button{touch-action:manipulation}
+.stepper{display:flex;border:1.5px solid var(--accent);border-radius:.55rem;overflow:hidden;height:2.6rem;background:var(--surface)}
+.stepper button{flex:0 0 2.6rem;border:0;background:var(--accent-soft);color:var(--accent);font-size:1.5rem;font-weight:700;line-height:1;cursor:pointer;padding:0}
+.stepper button:active{background:var(--accent);color:var(--on-accent)}
 .stepper button:disabled{opacity:.4}
-.stepper input{flex:1 1 auto;width:100%;border:0;text-align:center;font-family:var(--num);font-size:13px;font-weight:600;padding:0;background:transparent;-moz-appearance:textfield}
-.stepper input::placeholder{font-size:10.5px;font-weight:500;color:var(--muted)}
+.stepper input{flex:1 1 auto;width:100%;border:0;border-radius:0;text-align:center;font-family:var(--num);font-size:var(--field);font-weight:600;padding:0;background:transparent;-moz-appearance:textfield;appearance:textfield}
+.stepper input::placeholder{font-family:var(--body);font-size:1rem;font-weight:500;color:var(--muted)}
+.stepper input:disabled{color:var(--muted)}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.sel{width:100%;height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px}
-.chips{display:flex;gap:4px;flex:none}
-.chip{flex:1 1 0;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:3px 2px;font:inherit;font-size:10.5px;font-weight:600;cursor:pointer;text-align:center;line-height:1.15}
-.chip small{display:block;font-weight:500;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sel{width:100%;height:2.6rem;border:1px solid var(--line);border-radius:.55rem;padding:0 .4rem;font-size:var(--field)}
+.opt{width:100%;height:2.6rem;border:1.5px solid var(--accent);border-radius:.55rem;background:var(--accent);color:var(--on-accent);font-size:1rem;font-weight:700;cursor:pointer;padding:0 .3rem;white-space:nowrap}
+.opt[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+label.warn{color:var(--warn)}
+.chips{display:flex;gap:.35rem;flex:none}
+.chip{flex:1 1 0;min-width:0;min-height:2.9rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:.55rem;padding:.25rem .1rem;font-size:.92rem;font-weight:600;cursor:pointer;text-align:center;line-height:1.15}
+.chip small{display:block;font-weight:500;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip.on{border-color:var(--accent);background:var(--accent-soft)}
 .chip.on small{color:var(--accent)}
-.hero{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center}
-.donut{width:92px;height:92px;display:block}
+.chip:active{border-color:var(--accent)}
+/* the answer comes first, so it stays in view above the keyboard while the salary is typed */
+.hero{border-color:var(--accent)}
+.heroTop{display:grid;grid-template-columns:8.4rem minmax(0,1fr);gap:.9rem;align-items:center}
+/* month bars: shown only on screens with height to spare (see fit() in the script); tap a bar to see that month */
+#months{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:.25rem;margin-top:.5rem;padding-top:.4rem;border-top:1px solid var(--line)}
+.col{display:flex;flex-direction:column;min-width:0;height:100%;border:0;background:none;padding:0;cursor:pointer;text-align:center;color:var(--muted)}
+.col .track{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:flex-end}
+.col .val{font-family:var(--num);font-size:.72rem;letter-spacing:-.04em;white-space:nowrap}
+.col .bar{background:var(--accent);opacity:.4;border-radius:.25rem .25rem 0 0;min-height:2px}
+.col .m{font-size:.75rem;padding-top:.1rem;border-top:1px solid var(--line)}
+.col.on{color:var(--ink);font-weight:600}
+.col.on .bar{opacity:1}
+.donut{width:8.4rem;height:8.4rem;display:block}
 .donut circle{fill:none;stroke-width:5.2}
 .donut .bgc{stroke:var(--line)}
 .donut text{fill:var(--ink);font-family:var(--num);font-weight:600}
 .donut .dsub{fill:var(--muted);font-family:var(--body);font-weight:500}
 .s-net{stroke:var(--accent)}.s-tax{stroke:var(--tax)}.s-ni{stroke:var(--ni)}.s-pen{stroke:var(--pen)}.s-oth{stroke:var(--oth)}
 .b-net{background:var(--accent)}.b-tax{background:var(--tax)}.b-ni{background:var(--ni)}.b-pen{background:var(--pen)}.b-oth{background:var(--oth)}.b-emp{background:var(--accent)}.b-bon{background:var(--ni)}
-.big{font-family:var(--num);font-size:21px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
-.cap{font-size:10px;color:var(--muted)}
-.msel{height:20px;border:1px solid var(--accent);border-radius:5px;font-size:11px;font-weight:600;padding:0 2px;color:var(--accent)}
-.leg{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:1px 6px;margin-top:4px;font-size:10.5px;align-items:center;font-variant-numeric:tabular-nums}
-.leg i{width:7px;height:7px;border-radius:2px;display:block}
+.big{display:block;font-family:var(--num);font-size:2.35rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em}
+.cap{font-size:.9rem;color:var(--muted)}
+#oMonth{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msel{height:max(1.9rem,24px);border:1px solid var(--accent);border-radius:.45rem;font-size:var(--field);font-weight:600;padding:0 .1rem;color:var(--accent)}
+.leg{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:.1rem .5rem;margin-top:.35rem;font-size:.95rem;align-items:center;font-variant-numeric:tabular-nums}
+.leg i{width:.65rem;height:.65rem;border-radius:.15rem;display:block}
+.leg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .leg b{font-family:var(--num);font-weight:600;text-align:right}
-.leg em{font-style:normal;color:var(--muted);text-align:right;font-size:9.5px}
-.barsbox{flex:1 1 60px;min-height:62px;display:flex;flex-direction:column}
-.hd{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:10.5px}
-.hd strong{font-weight:600}
-.hd span{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.bars{flex:1 1 auto;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;align-items:end;min-height:0;margin-top:2px}
-.col{display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:0;text-align:center}
-.col .val{font-family:var(--num);font-size:8.5px;color:var(--muted);white-space:nowrap;letter-spacing:-.03em}
-.col .bar{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;opacity:.75}
-.col.bon .bar{opacity:1}
-.col.bon .val{color:var(--ink);font-weight:600}
-.col .m{font-size:9px;color:var(--muted);border-top:1px solid var(--line);padding-top:1px}
-.scalebox{flex:none}
-.scale{position:relative;height:26px;display:flex;border-radius:5px;margin-top:5px;background:var(--line)}
-.zone{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--num);font-size:9.5px;font-weight:600;color:var(--ink);overflow:hidden;border-right:1px solid var(--surface);position:relative}
-.zone:first-child{border-radius:5px 0 0 5px}.zone:last-of-type{border-radius:0 5px 5px 0;border-right:0}
+.leg em{font-style:normal;color:var(--muted);text-align:right;font-size:.85rem}
+.hd{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;font-size:.95rem}
+.hd strong{font-weight:600;white-space:nowrap}
+.hd span{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scale{position:relative;height:2.3rem;display:flex;border-radius:.4rem;margin-top:.45rem;background:var(--line)}
+.zone{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--num);font-size:.88rem;font-weight:600;color:var(--ink);overflow:hidden;border-right:1px solid var(--surface);position:relative}
+.zone:first-child{border-radius:.4rem 0 0 .4rem}.zone:last-of-type{border-radius:0 .4rem .4rem 0;border-right:0}
 .zone::before{content:"";position:absolute;inset:0;background:var(--tax);opacity:var(--o)}
 .zone.free::before{background:var(--accent);opacity:.3}
 .zone span{position:relative}
-.mk{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2.5px solid var(--ink);z-index:2}
-.mk::after{content:"";position:absolute;top:-3px;left:-5.5px;border:4.5px solid transparent;border-top-color:var(--ink)}
+.mk{position:absolute;top:-.3rem;bottom:-.3rem;width:0;border-left:2.5px solid var(--ink);z-index:2}
+.mk::after{content:"";position:absolute;top:-.25rem;left:calc(-.4rem - 1.25px);border:.4rem solid transparent;border-top-color:var(--ink)}
 .mk.was{border-left:1.5px dashed var(--muted);top:0;bottom:0}.mk.was::after{display:none}
-.ticks{position:relative;height:12px;font-size:8.5px;color:var(--muted);font-family:var(--num);margin-bottom:1px}
-.ticks span{position:absolute;top:1px;transform:translateX(-50%);white-space:nowrap}
-.stack{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--line);margin:4px 0 3px}
+.ticks{position:relative;height:1.1rem;font-size:.8rem;color:var(--muted);font-family:var(--num);margin-bottom:.1rem}
+.ticks span{position:absolute;top:.1rem;transform:translateX(-50%);white-space:nowrap}
+.stack{display:flex;height:.8rem;border-radius:.4rem;overflow:hidden;background:var(--line);margin:.35rem 0 .3rem}
 .stack span{display:block;height:100%}
-.pl{display:flex;flex-wrap:wrap;gap:1px 10px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
-.pl i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:3px}
+.pl{display:flex;flex-wrap:wrap;gap:.1rem .9rem;font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.pl i{display:inline-block;width:.65rem;height:.65rem;border-radius:.15rem;margin-right:.3rem}
 .pl b{color:var(--ink);font-family:var(--num);font-weight:600}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;flex:none}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 5px;min-width:0}
-.stat .v{font-family:var(--num);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.stat .t{font-size:8.8px;color:var(--muted);line-height:1.15}
-.alert{flex:none;margin:0;font-size:10.5px;border-radius:6px;padding:4px 8px;border:0;width:100%;text-align:left;font-family:inherit;cursor:pointer;background:var(--accent-soft);color:var(--good);display:block}
-.alert span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.opt{width:100%;height:28px;border:1.5px solid var(--accent);border-radius:6px;background:var(--accent);color:var(--on-accent);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;padding:0 4px;white-space:nowrap}
-.opt[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;flex:none}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:.55rem;padding:.35rem .45rem;min-width:0}
+.stat .v{font-family:var(--num);font-size:1.12rem;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .t{font-size:.8rem;color:var(--muted);line-height:1.15}
+.alert{flex:none;margin:0;font-size:.9rem;border-radius:.55rem;padding:.3rem .7rem;border:0;width:100%;text-align:left;cursor:pointer;background:var(--accent-soft);color:var(--good);display:flex;align-items:center;gap:.6rem}
+.alert b{flex:none;font-weight:600;white-space:nowrap}
+.alert span{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert span{flex:1 1 auto;min-width:0}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-/* panels */
-.sheet{position:fixed;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column}
-.sheet.open{display:flex}
-.sheet header{flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
-.sheet h2{font-size:13px;margin:0}
-.sheet .body{flex:1 1 auto;overflow-y:auto;padding:10px 16px 20px;max-width:480px;width:100%;margin:0 auto}
-.done{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:6px;background:var(--accent);color:var(--on-accent);padding:6px 14px;cursor:pointer}
-.fg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.stepper:focus-within{box-shadow:0 0 0 2px var(--accent-soft)}
+.stepper input:focus-visible{outline:0}
+/* panels: sheets that slide up over the main screen */
+.sheet{position:fixed;inset:auto 0 0 0;margin:0 auto;width:100%;max-width:30rem;height:92vh;height:92dvh;max-height:none;padding:0;border:0;border-radius:1.2rem 1.2rem 0 0;background:var(--bg);color:var(--ink);flex-direction:column;overflow:hidden;box-shadow:0 -.3rem 2rem rgba(0,0,0,.25)}
+.sheet[open]{display:flex;animation:up .22s ease-out}
+.sheet::backdrop{background:rgba(8,16,13,.55)}
+@keyframes up{from{transform:translateY(12%);opacity:0}to{transform:none;opacity:1}}
+.sheet header{flex:none;display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.3rem .7rem;border-bottom:1px solid var(--line);background:var(--surface);position:relative}
+.sheet header::before{content:"";position:absolute;top:.35rem;left:50%;width:3rem;height:.3rem;margin-left:-1.5rem;border-radius:99px;background:var(--line)}
+.sheet h2{font-size:1.3rem;margin:0}
+.sheet .body{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;padding:1rem 1.3rem max(1.6rem,env(safe-area-inset-bottom));font-size:max(1rem,13px)}
+.done{font-size:max(1.05rem,14px);font-weight:600;border:0;border-radius:.55rem;background:var(--accent);color:var(--on-accent);padding:.55rem 1.4rem;min-height:36px;cursor:pointer}
+.fg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.7rem}
 .fg .full{grid-column:1/-1}
-.fg input,.fg select{width:100%;height:30px;border:1px solid var(--line);border-radius:6px;padding:0 7px;font-size:12.5px}
+.fg input,.fg select{width:100%;height:max(3rem,40px);border:1px solid var(--line);border-radius:.55rem;padding:0 .6rem;font-size:var(--field)}
 .fg input[type=number]{font-family:var(--num)}
-.item{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px;margin-top:8px}
-.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;height:30px}
-.seg button{flex:1;border:0;background:var(--surface);color:var(--muted);font:inherit;font-size:11.5px;cursor:pointer;padding:0 2px}
+.item{border:1px solid var(--line);background:var(--surface);border-radius:.8rem;padding:.7rem;margin-top:.7rem}
+.seg{display:flex;border:1px solid var(--line);border-radius:.55rem;overflow:hidden;height:max(3rem,40px)}
+.seg button{flex:1;border:0;background:var(--surface);color:var(--muted);font-size:max(1rem,13px);cursor:pointer;padding:0 .2rem}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
-.btn{font:inherit;font-size:11.5px;font-weight:600;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:6px;padding:6px 10px;cursor:pointer}
-.btn.small{padding:3px 8px;font-size:10.5px;border-color:var(--line);color:var(--muted)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.note{font-size:10.5px;color:var(--muted);margin:8px 0 0}
-.status{font-size:11px;margin:8px 0 0}
+.btn{font-size:max(1rem,13px);font-weight:600;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:.55rem;padding:.6rem .9rem;min-height:36px;cursor:pointer}
+.btn.small{padding:.35rem .8rem;border-color:var(--line);color:var(--muted)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap}
+.note{font-size:max(.92rem,12px);color:var(--muted);margin:.7rem 0 0}
+.status{font-size:max(.95rem,12.5px);margin:.7rem 0 0}
 .status.warn{color:var(--warn)}
-h3{font-size:11.5px;margin:14px 0 0}
-.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;margin:6px 0 0;font-size:11.5px}
+h3{font-size:max(1.05rem,13.5px);margin:1.2rem 0 0}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem 1rem;margin:.5rem 0 0}
 .kv dt{color:var(--muted)}
 .kv dd{margin:0;font-family:var(--num);text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
-.kv .tot{border-top:1px solid var(--line);padding-top:3px;color:var(--ink);font-weight:700}
-.tablewrap{overflow-x:auto;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-table{border-collapse:collapse;font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
-th,td{padding:4px 7px;border-bottom:1px solid var(--line);text-align:right}
+.kv .tot{border-top:1px solid var(--line);padding-top:.25rem;color:var(--ink);font-weight:700}
+.tablewrap{overflow-x:auto;margin-top:.5rem;border:1px solid var(--line);border-radius:.8rem;background:var(--surface)}
+table{border-collapse:collapse;font-size:max(.9rem,11.5px);font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{padding:.35rem .6rem;border-bottom:1px solid var(--line);text-align:right}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
 thead th{color:var(--muted);font-weight:600}
 tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
 [hidden]{display:none!important}
-@media (max-height:540px){#app{overflow-y:auto}}
-@media (min-height:760px){.scale{height:40px}#app{gap:9px;padding-top:12px}.box{padding:9px 10px}.hero{grid-template-columns:108px minmax(0,1fr)}.donut{width:108px;height:108px}}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <main id="app">
-  <header class="top"><h1>Take-Home Pay</h1><span class="yr">2027/28 forecast</span><span class="priv">Nothing is saved</span></header>
+  <header class="top"><h1>Take-Home Pay</h1><span class="yr">2027/28</span><span class="priv">Nothing is saved</span></header>
+
+  <section class="box hero" aria-label="Your take-home pay">
+    <div class="heroTop">
+    <svg class="donut" id="donut" viewBox="0 0 42 42" role="img" aria-label="Share of gross pay"></svg>
+    <div>
+      <div class="cap">Take-home in <select id="viewMonth" class="msel" aria-label="Month to show"></select></div>
+      <output class="big" id="oNet" for="salary">—</output>
+      <div class="cap" id="oMonth">Enter your salary to see results</div>
+      <div class="leg" id="legend"></div>
+    </div>
+    </div>
+    <div id="months" role="group" aria-label="Take-home pay each month" hidden></div>
+  </section>
 
   <section class="box" aria-label="Your pay">
     <div class="g2">
       <div><label for="salary">Annual salary £</label>
-        <div class="stepper"><button type="button" data-step="salary" data-d="-500" aria-label="Decrease salary">−</button>
-        <input id="salary" type="number" inputmode="decimal" step="any" min="0" placeholder="Enter salary">
-        <button type="button" data-step="salary" data-d="500" aria-label="Increase salary">+</button></div></div>
+        <div class="stepper"><button type="button" data-step="salary" data-d="-500" aria-label="Decrease salary by £500">−</button>
+        <input id="salary" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter salary">
+        <button type="button" data-step="salary" data-d="500" aria-label="Increase salary by £500">+</button></div></div>
       <div><label for="region">Tax region</label>
         <select id="region" class="sel"><option value="eng">England</option><option value="sco">Scotland</option><option value="wal">Wales</option><option value="ni">N. Ireland</option></select></div>
     </div>
     <div class="g2 even">
       <div><label for="eePct" id="eeLbl">Your pension %</label>
         <div class="stepper"><button type="button" data-step="eePct" data-d="-1" aria-label="Decrease your pension percentage">−</button>
-        <input id="eePct" type="number" inputmode="decimal" step="any" min="0" max="100">
+        <input id="eePct" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" max="100">
         <button type="button" data-step="eePct" data-d="1" aria-label="Increase your pension percentage">+</button></div></div>
       <div><label for="erPct">Employer pension %</label>
         <div class="stepper"><button type="button" data-step="erPct" data-d="-1" aria-label="Decrease employer pension percentage">−</button>
-        <input id="erPct" type="number" inputmode="decimal" step="any" min="0" max="100">
+        <input id="erPct" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" max="100">
         <button type="button" data-step="erPct" data-d="1" aria-label="Increase employer pension percentage">+</button></div></div>
     </div>
     <div class="g2 even">
-      <div><label for="netTarget">Monthly target £</label>
-        <div class="stepper"><button type="button" data-step="netTarget" data-d="-50" aria-label="Decrease take-home target">−</button>
-        <input id="netTarget" type="number" inputmode="decimal" step="any" min="0" placeholder="e.g. 2500">
-        <button type="button" data-step="netTarget" data-d="50" aria-label="Increase take-home target">+</button></div></div>
+      <div><label for="netTarget" id="tgtLbl">Monthly target £</label>
+        <div class="stepper"><button type="button" data-step="netTarget" data-d="-50" aria-label="Decrease take-home target by £50">−</button>
+        <input id="netTarget" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="e.g. 2,500">
+        <button type="button" data-step="netTarget" data-d="50" aria-label="Increase take-home target by £50">+</button></div></div>
       <div><span class="lbl">Hit it tax efficiently</span><button type="button" class="opt" id="optBtn" aria-pressed="false">Make tax efficient</button></div>
     </div>
-    <div class="cap" id="optMsg" style="margin-top:3px"></div>
   </section>
 
   <nav class="chips" aria-label="More inputs and detail">
-    <button type="button" class="chip" data-open="shBonus">Bonus<small id="cBonus">add</small></button>
-    <button type="button" class="chip" data-open="shSac">Sacrifice<small id="cSac">C2W etc</small></button>
-    <button type="button" class="chip" data-open="shPost">After tax<small id="cPost">add</small></button>
-    <button type="button" class="chip" data-open="shPen">Pension<small id="cPen">options</small></button>
-    <button type="button" class="chip" data-open="shMore">More<small id="cMore">options</small></button>
-    <button type="button" class="chip" data-open="shDetail">Detail<small>table</small></button>
+    <button type="button" class="chip" data-open="shBonus" aria-haspopup="dialog">Bonus<small id="cBonus">add</small></button>
+    <button type="button" class="chip" data-open="shSac" aria-haspopup="dialog">Sacrifice<small id="cSac">C2W etc</small></button>
+    <button type="button" class="chip" data-open="shPost" aria-haspopup="dialog">After tax<small id="cPost">add</small></button>
+    <button type="button" class="chip" data-open="shPen" aria-haspopup="dialog">Pension<small id="cPen">options</small></button>
+    <button type="button" class="chip" data-open="shMore" aria-haspopup="dialog">More<small id="cMore">options</small></button>
+    <button type="button" class="chip" data-open="shDetail" aria-haspopup="dialog">Detail<small>table</small></button>
   </nav>
-
-  <section class="box hero" aria-label="Where your pay goes">
-    <svg class="donut" id="donut" viewBox="0 0 42 42" role="img" aria-label="Share of gross pay"></svg>
-    <div>
-      <div class="cap">Take-home in <select id="viewMonth" class="msel" aria-label="Month to show"></select></div>
-      <div class="big" id="oNet">—</div>
-      <div class="cap" id="oMonth">Enter your salary to see results</div>
-      <div class="leg" id="legend"></div>
-    </div>
-  </section>
 
   <section class="box scalebox" aria-label="Tax efficiency scale">
     <div class="hd"><strong>Tax efficiency scale</strong><span id="scCap"></span></div>
@@ -215,76 +248,74 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
     <div class="cap" id="scMsg">Shows which tax band your income reaches and how far pension and sacrifice pull it back.</div>
   </section>
 
-  <section class="box" aria-label="Pension">
-    <div class="hd"><strong>Into pension this year</strong><span id="penCap"></span></div>
-    <div class="stack" id="penBar"></div>
-    <div class="pl" id="penLeg"></div>
-  </section>
-
   <section class="stats" aria-label="Tax efficiency">
-    <div class="stat"><div class="v" id="e1">—</div><div class="t">tax + NI share of gross pay</div></div>
-    <div class="stat"><div class="v" id="e2">—</div><div class="t">saved by pension + sacrifice</div></div>
-    <div class="stat"><div class="v" id="e3">—</div><div class="t">kept from next £100 of salary</div></div>
-    <div class="stat"><div class="v" id="e4">—</div><div class="t">cost of £100 more into pension</div></div>
+    <div class="stat"><div class="v" id="e1">—</div><div class="t">of pay goes on tax and NI</div></div>
+    <div class="stat"><div class="v" id="e2">—</div><div class="t">tax and NI saved</div></div>
+    <div class="stat"><div class="v" id="e3">—</div><div class="t">kept of next £100 of pay</div></div>
+    <div class="stat"><div class="v" id="e4">—</div><div class="t">into pension this year</div></div>
   </section>
 
-  <button type="button" class="alert" id="alert" data-open="shDetail" hidden><span id="alertTxt"></span></button>
+  <button type="button" class="alert" id="alert" data-open="shDetail" aria-haspopup="dialog" hidden><span id="alertTxt"></span><b id="alertMore"></b></button>
+  <noscript><p class="note">This calculator needs JavaScript turned on. Everything runs on your device; nothing is sent anywhere.</p></noscript>
 </main>
 
-<div class="sheet" id="shBonus" role="dialog" aria-label="Bonus"><header><h2>Bonus</h2><button type="button" class="done">Done</button></header><div class="body">
+<dialog class="sheet" id="shBonus" aria-labelledby="shBonusT"><header><h2 id="shBonusT">Bonus</h2><button type="button" class="done">Done</button></header><div class="body">
   <div class="fg">
-    <div><label for="bonusValue">Bonus</label><input id="bonusValue" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+    <div><label for="bonusValue">Bonus</label><input id="bonusValue" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" placeholder="0"></div>
     <div><span class="lbl" id="btLbl">Entered as</span><div class="seg" role="group" aria-labelledby="btLbl"><button type="button" id="btAmount">£ amount</button><button type="button" id="btPct">% of salary</button></div></div>
     <div><label for="bonusMonth">Paid in</label><select id="bonusMonth"></select></div>
     <div><label for="bsType">Bonus into pension</label><select id="bsType"><option value="none">None, all cash</option><option value="pct">A % of the bonus</option><option value="amount">A £ amount</option><option value="target">To leave a set take-home</option></select></div>
-    <div class="full" id="bsValWrap" hidden><label for="bsValue" id="bsValLbl">Amount</label><input id="bsValue" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+    <div class="full" id="bsValWrap" hidden><label for="bsValue" id="bsValLbl">Amount</label><input id="bsValue" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" placeholder="0"></div>
   </div>
   <dl class="kv" id="bonusKv"></dl><p class="note" id="bonusNote"></p><p class="status" id="status"></p>
-</div></div>
+</div></dialog>
 
-<div class="sheet" id="shSac" role="dialog" aria-label="Salary sacrifice"><header><h2>Salary sacrifice</h2><button type="button" class="done">Done</button></header><div class="body">
+<dialog class="sheet" id="shSac" aria-labelledby="shSacT"><header><h2 id="shSacT">Salary sacrifice</h2><button type="button" class="done">Done</button></header><div class="body">
   <p class="note" style="margin-top:0">Cycle to Work and other schemes taken from pay before tax and NI. Enter each as a monthly or a yearly amount.</p>
   <div id="sacList"></div>
-  <div class="row" style="margin-top:10px"><button type="button" class="btn" id="addC2W">Add Cycle to Work</button><button type="button" class="btn" id="addSac">Add other salary sacrifice</button></div>
-</div></div>
+  <div class="row" style="margin-top:.9rem"><button type="button" class="btn" id="addC2W">Add Cycle to Work</button><button type="button" class="btn" id="addSac">Add other salary sacrifice</button></div>
+</div></dialog>
 
-<div class="sheet" id="shPost" role="dialog" aria-label="Deductions after tax"><header><h2>Deductions after tax</h2><button type="button" class="done">Done</button></header><div class="body">
+<dialog class="sheet" id="shPost" aria-labelledby="shPostT"><header><h2 id="shPostT">Deductions after tax</h2><button type="button" class="done">Done</button></header><div class="body">
   <p class="note" style="margin-top:0">Savings schemes, share plans, union fees and similar. These reduce take-home but do not change tax or NI.</p>
   <div id="postList"></div>
-  <div class="row" style="margin-top:10px"><button type="button" class="btn" id="addPost">Add a deduction</button></div>
-</div></div>
+  <div class="row" style="margin-top:.9rem"><button type="button" class="btn" id="addPost">Add a deduction</button></div>
+</div></dialog>
 
-<div class="sheet" id="shPen" role="dialog" aria-label="Pension options"><header><h2>Pension options</h2><button type="button" class="done">Done</button></header><div class="body">
+<dialog class="sheet" id="shPen" aria-labelledby="shPenT"><header><h2 id="shPenT">Pension options</h2><button type="button" class="done">Done</button></header><div class="body">
+  <div class="hd"><strong>Into pension this year</strong><span id="penCap"></span></div>
+  <div class="stack" id="penBar"></div>
+  <div class="pl" id="penLeg" style="margin-bottom:1rem"></div>
   <div class="fg">
     <div class="full"><label for="method">How your pension is taken</label><select id="method"><option value="sacrifice">Salary sacrifice (saves tax and NI)</option><option value="netpay">From pay before tax (saves tax only)</option><option value="ras">From pay after tax (provider adds 20%)</option></select></div>
     <div class="full"><span class="lbl" id="pmLbl">Set your pension by</span><div class="seg" role="group" aria-labelledby="pmLbl"><button type="button" id="pmPct">Pension %</button><button type="button" id="pmTarget">Take-home target</button></div></div>
   </div>
   <p class="status" id="pctResult"></p>
   <p class="note">With a take-home target, the pension % is worked out so each normal month, without the bonus, pays the target on the main screen, after everything else you have entered. The Make tax efficient button also sends the whole bonus to the pension.</p>
-</div></div>
+</div></dialog>
 
-<div class="sheet" id="shMore" role="dialog" aria-label="More options"><header><h2>More options</h2><button type="button" class="done">Done</button></header><div class="body">
+<dialog class="sheet" id="shMore" aria-labelledby="shMoreT"><header><h2 id="shMoreT">More options</h2><button type="button" class="done">Done</button></header><div class="body">
   <div class="fg">
-    <div><label for="risePct">Pay rise in year %</label><input id="risePct" type="number" inputmode="decimal" step="any" placeholder="0"></div>
+    <div><label for="risePct">Pay rise in year %</label><input id="risePct" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" placeholder="0"></div>
     <div><label for="riseFrom">Pay rise starts</label><select id="riseFrom"></select></div>
-    <div><label for="bik">Taxable benefits £/month</label><input id="bik" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></div>
-    <div><label for="allowance">Tax-free allowance £</label><input id="allowance" type="number" inputmode="decimal" step="any" min="0"></div>
+    <div><label for="bik">Taxable benefits £/month</label><input id="bik" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0" placeholder="0"></div>
+    <div><label for="allowance">Tax-free allowance £</label><input id="allowance" type="number" inputmode="decimal" autocomplete="off" enterkeyhint="done" step="any" min="0"></div>
     <div><label for="loan">Student loan</label><select id="loan"><option value="">None</option><option value="p1">Plan 1</option><option value="p2">Plan 2</option><option value="p4">Plan 4</option><option value="p5">Plan 5</option></select></div>
     <div><label for="pg">Postgraduate loan</label><select id="pg"><option value="0">No</option><option value="1">Yes</option></select></div>
-    <div class="full"><label for="children">Children on Child Benefit</label><input id="children" type="number" inputmode="numeric" step="1" min="0" placeholder="0"></div>
+    <div class="full"><label for="children">Children on Child Benefit</label><input id="children" type="number" inputmode="numeric" autocomplete="off" enterkeyhint="done" step="1" min="0" placeholder="0"></div>
   </div>
   <p class="note">Taxable benefits are things like company medical cover taxed through your pay. The standard allowance is £12,570 (tax code 1257L); for another code, use the number in the code times 10. Child Benefit counts if you or your partner claim it.</p>
-  <div class="row" style="margin-top:14px"><span class="note" style="margin:0">Start again with a blank calculator.</span><button type="button" class="btn small" id="reset">Clear everything</button></div>
-</div></div>
+  <div class="row" style="margin-top:1.2rem"><span class="note" style="margin:0">Start again with a blank calculator.</span><button type="button" class="btn small" id="reset">Clear everything</button></div>
+</div></dialog>
 
-<div class="sheet" id="shDetail" role="dialog" aria-label="Detail"><header><h2>Detail</h2><button type="button" class="done">Done</button></header><div class="body">
+<dialog class="sheet" id="shDetail" aria-labelledby="shDetailT"><header><h2 id="shDetailT">Detail</h2><button type="button" class="done">Done</button></header><div class="body">
   <div id="effNotes"></div>
-  <h3 style="margin-top:4px">Pension over the year</h3><dl class="kv" id="penKv"></dl><p class="note" id="penNote"></p>
+  <h3 style="margin-top:.3rem">Pension over the year</h3><dl class="kv" id="penKv"></dl><p class="note" id="penNote"></p>
   <h3>Tax efficiency</h3><dl class="kv" id="effKv"></dl>
-  <h3>Month by month</h3><div class="tablewrap"><table id="tbl"></table></div>
+  <h3>Month by month</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Month by month table, scrolls sideways"><table id="tbl"></table></div>
   <h3>Rates used</h3><p class="note" id="ratesNote"></p>
   <p class="note">UK income tax and NI thresholds are confirmed as unchanged for 2027/28. Scottish bands for 2027/28, Child Benefit and student loan thresholds were not set when this was built, so the 2026/27 figures are used. Tax is worked out month by month on the cumulative basis payroll uses. The allowance is reduced when income is over £100,000. Higher-rate relief on after-tax pension contributions, which you claim from HMRC yourself, is not included. This is an estimate, not financial or tax advice. Nothing you enter is saved or sent anywhere.</p>
-</div></div>
+</div></dialog>
 
 <script>
 
@@ -396,8 +427,12 @@ const SEL=["region","method","bonusMonth","bsType","riseFrom","loan","pg"];
 const monthOpts=(sel,val)=>{sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}"${i+1==val?" selected":""}>${m}</option>`).join("");};
 const setSeg=(a,b,on)=>{$(a).setAttribute("aria-pressed",on);$(b).setAttribute("aria-pressed",!on);};
 const short=x=>x>=99950?Math.round(x/1000)+"k":x>=1000?(x/1000).toFixed(1)+"k":Math.round(x)+"";
+// salary and target are shown with thousands separators, so they are text fields, not number fields
+const MONEY=["salary","netTarget"];
+const show=id=>S[id]==null?"":MONEY.includes(id)?S[id].toLocaleString("en-GB",{maximumFractionDigits:2}):S[id];
+const readNum=id=>{const x=parseFloat(MONEY.includes(id)?$(id).value.replace(/[^\d.]/g,""):$(id).value);return isNaN(x)?null:x;};
 function syncForm(){
-  NUM.forEach(id=>{$(id).value=S[id]==null?"":S[id];});
+  NUM.forEach(id=>{$(id).value=show(id);});
   monthOpts($("bonusMonth"),S.bonusMonth);monthOpts($("riseFrom"),S.riseFrom);monthOpts($("viewMonth"),1);
   ["region","method","bsType","loan","pg"].forEach(id=>{$(id).value=S[id];});
   setSeg("pmPct","pmTarget",S.pensionMode==="pct");
@@ -405,13 +440,20 @@ function syncForm(){
   renderList("sac");renderList("post");update();
 }
 function bind(){
-  NUM.forEach(id=>$(id).addEventListener("input",()=>{const x=parseFloat($(id).value);S[id]=isNaN(x)?null:x;update();}));
+  NUM.forEach(id=>$(id).addEventListener("input",()=>{S[id]=readNum(id);update();}));
+  MONEY.forEach(id=>$(id).addEventListener("blur",()=>{$(id).value=show(id);}));
+  // on the main screen, tapping a field selects its contents so a new figure replaces the old one, and Done closes the keyboard
+  document.querySelectorAll(".stepper input").forEach(el=>el.addEventListener("focus",()=>el.select()));
+  document.querySelectorAll("input").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")el.blur();}));
   SEL.forEach(id=>$(id).addEventListener("change",()=>{const x=$(id).value;S[id]=(id==="bonusMonth"||id==="riseFrom")?+x:x;update();}));
   document.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.step;
-    S[id]=Math.max(0,Math.round((v(S[id])+ +b.dataset.d)*100)/100);$(id).value=S[id];update();}));
-  document.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>{$(b.dataset.open).classList.add("open");}));
-  document.querySelectorAll(".sheet .done").forEach(b=>b.addEventListener("click",()=>b.closest(".sheet").classList.remove("open")));
-  document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".sheet.open").forEach(s=>s.classList.remove("open"));});
+    S[id]=Math.max(0,Math.round((v(S[id])+ +b.dataset.d)*100)/100);$(id).value=show(id);update();}));
+  // panels are native dialogs: the browser handles focus, Escape and the phone's back button
+  document.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>{$(b.dataset.open).showModal();}));
+  document.querySelectorAll(".sheet").forEach(d=>{
+    d.querySelector(".done").addEventListener("click",()=>d.close());
+    d.addEventListener("click",e=>{if(e.target===d)d.close();});   // a tap on the dimmed area outside the panel
+  });
   $("pmPct").addEventListener("click",()=>{S.pensionMode="pct";syncForm();});
   $("pmTarget").addEventListener("click",()=>{S.pensionMode="target";syncForm();});
   $("btAmount").addEventListener("click",()=>{S.bonusType="amount";syncForm();});
@@ -421,9 +463,12 @@ function bind(){
   $("addPost").addEventListener("click",()=>{S.post.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("post");update();});
   $("reset").addEventListener("click",()=>{S=blank();syncForm();});
   $("viewMonth").addEventListener("change",e=>{S.viewMonth=+e.target.value;update();});
+  $("months").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;S.viewMonth=+b.dataset.m;update();
+    const again=$("months").querySelector(`[data-m="${S.viewMonth}"]`);if(again)again.focus();});
+  addEventListener("resize",fit);
   $("optBtn").addEventListener("click",()=>{
     if(S.pensionMode==="target"){if(v(S.salary)>0&&v(S.netTarget)>0)S.eePct=Math.round(compute(S).pct*10)/10;S.pensionMode="pct";syncForm();return;}
-    if(!(v(S.netTarget)>0)){$("optMsg").textContent="Enter the monthly take-home you want first, then tap the button.";$("netTarget").focus();return;}
+    if(!(v(S.netTarget)>0)){needTarget(true);$("netTarget").focus();return;}
     S.pensionMode="target";if(bonusGross(S)>0){S.bsType="pct";S.bsValue=100;}syncForm();
   });
 }
@@ -452,6 +497,18 @@ function renderList(key){
   });
 }
 const kv=rows=>rows.filter(Boolean).map(([k,val,tot])=>`<dt class="${tot?"tot":""}">${k}</dt><dd class="${tot?"tot":""}">${val}</dd>`).join("");
+// the target label turns into a prompt when the button needs a target to work with
+function needTarget(on){const l=$("tgtLbl");l.textContent=on?"Enter a target first £":"Monthly target £";l.classList.toggle("warn",on);}
+// Month bars use whatever height is left over. They are left out when the screen has no room, so the page never scrolls.
+function fit(){
+  const app=$("app"),box=$("months");box.hidden=true;
+  if(!box.firstChild)return;
+  const cs=getComputedStyle(app),rem=parseFloat(getComputedStyle(document.documentElement).fontSize),gap=parseFloat(cs.rowGap)||0;
+  const kids=[...app.children].filter(el=>el.offsetHeight>0);
+  const spare=app.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-kids.reduce((a,el)=>a+el.offsetHeight,0)-gap*(kids.length-1);
+  const h=Math.min(spare-.5*rem-2,8*rem);
+  if(h>=5.5*rem){box.style.height=Math.floor(h)+"px";box.hidden=false;}
+}
 function chip(id,text,on){const el=$(id);el.textContent=text;el.parentElement.classList.toggle("on",!!on);}
 function donut(parts,centre,sub){
   let off=25,h='<circle class="bgc" cx="21" cy="21" r="15.915"/>';
@@ -500,7 +557,7 @@ function update(){
   const extras=[v(S.risePct)?1:0,v(S.bik)?1:0,S.loan?1:0,S.pg==="1"?1:0,v(S.children)?1:0,v(S.allowance)!==12570?1:0].reduce((a,b)=>a+b,0);
   chip("cMore",extras?extras+" set":"options",extras);
   $("optBtn").setAttribute("aria-pressed",target);$("optBtn").textContent=target?"On · tap to turn off":"Make tax efficient";
-  if(!target||!has)$("optMsg").textContent=target?"Enter your salary.":"Set a target, then tap the button.";
+  needTarget(target&&!(v(S.netTarget)>0));
   $("eeLbl").textContent=target?"Your pension % (solved)":"Your pension %";
   $("eePct").disabled=target;document.querySelectorAll('[data-step="eePct"]').forEach(b=>b.disabled=target);
   if(!target&&document.activeElement!==$("eePct"))$("eePct").value=S.eePct==null?"":S.eePct;
@@ -513,7 +570,7 @@ function update(){
     donut([],"—","of pay kept");$("legend").innerHTML="";$("penCap").textContent="";$("scCap").textContent="";
     drawScale(null);
     $("penBar").innerHTML="";$("penLeg").innerHTML="";["e1","e2","e3","e4"].forEach(id=>$(id).textContent="—");
-    $("alert").hidden=true;if(target)$("eePct").value="";
+    $("alert").hidden=true;if(target)$("eePct").value="";$("months").innerHTML="";fit();
     ["pctResult","status","penNote","bonusNote"].forEach(id=>$(id).textContent="");$("bonusKv").innerHTML="";
     $("tbl").innerHTML="";$("effNotes").innerHTML="";$("penKv").innerHTML="";$("effKv").innerHTML="";
     return;
@@ -526,17 +583,18 @@ function update(){
   if(target){
     if(!C.pm){pr.textContent="Enter the monthly take-home you want.";pr.className="status";}
     else{pr.textContent=C.pm.msg||`Pension needed: ${C.pct.toFixed(1)}% of salary, about ${gbp(eePen/12)} a month.`;pr.className="status"+(C.pm.warn?" warn":"");}
-    $("optMsg").textContent=!C.pm?"Enter the monthly take-home you want.":C.pm.msg||`Pension ${C.pct.toFixed(1)}%${R.bg>0&&R.bs>=R.bg-.5?" plus the whole bonus":""}: ${gbp(eePen+bsac+emp)} into pension, ${gbp(C.saved)} tax and NI saved.`;
   }else pr.textContent="";
   const mr=R.rows[vm-1],isB=R.bg>0&&vm===+S.bonusMonth;
   $("oNet").textContent=gbp(mr.net,2);
-  $("oMonth").textContent=(isB?`includes ${gbp(C.bonusNet)} from the ${gbp(R.bg)} bonus · `:"")+`year ${gbp(C.net)}`;
+  $("oMonth").textContent=(isB?`incl. ${gbp(C.bonusNet)} bonus · `:"")+`${gbp(C.net)} a year`;
   const yourPen=eePen+bsac,other=sch+loan+post;
   const parts=[["net","Take-home",mr.net],["tax","Income tax",mr.tax],["ni","National Insurance",mr.ni],["pen","Your pension",mr.sacPen+mr.netpayPen+mr.rasNet+mr.bsac],["oth","Other deductions",mr.sch+mr.loan+mr.post]]
     .filter(p=>p[2]>0.5).map(([k,t,a])=>({k,t,a}));
   const tot=parts.reduce((a,p)=>a+p.a,0)||1;parts.forEach(p=>p.share=p.a/tot);
   donut(parts,Math.round(Math.max(0,mr.net)/tot*100)+"%","of pay kept");
   $("legend").innerHTML=parts.map(p=>`<i class="b-${p.k}"></i><span>${p.t}</span><b>${gbp(p.a)}</b><em>${pc(p.share,0)}</em>`).join("");
+  const mx=Math.max(1,...R.rows.map(r=>r.net));
+  $("months").innerHTML=R.rows.map(r=>`<button type="button" class="col${r.n===vm?" on":""}" data-m="${r.n}" aria-pressed="${r.n===vm}" aria-label="${MONTHS[r.n-1]}: ${gbp(r.net)} take-home"><span class="track"><span class="val">${short(Math.max(0,r.net))}</span><span class="bar" style="flex:0 0 ${Math.max(0,r.net)/mx*78}%"></span></span><span class="m">${MONTHS[r.n-1].slice(0,3)}</span></button>`).join("");
   drawScale(C);
   const sal=v(S.salary),penAll=yourPen+emp;
   $("penCap").textContent=`${gbp(penAll)} · ${pc(penAll/sal)} of salary`;
@@ -544,7 +602,7 @@ function update(){
   $("penBar").innerHTML=pp.map(p=>`<span class="b-${p[0]}" style="width:${p[2]/penAll*100}%"></span>`).join("");
   $("penLeg").innerHTML=pp.length?pp.map(p=>`<span><i class="b-${p[0]}"></i>${p[1]} <b>${gbp(p[2])}</b></span>`).join(""):"<span>No pension contributions entered</span>";
   $("e1").textContent=pc((tax+ni)/C.gross);$("e2").textContent=gbp(C.saved);
-  $("e3").textContent=gbp(C.keep,0);$("e4").textContent=C.penCost!=null?gbp(C.penCost,0):"—";
+  $("e3").textContent=gbp(C.keep,0);$("e4").textContent=gbp(penAll);
   const st=$("status");st.textContent=C.bsol.msg||"";st.className="status"+(C.bsol.warn?" warn":"");
   $("bonusKv").innerHTML=R.bg?kv([["Bonus before deductions",gbp(R.bg,2)],R.bs?["Into pension",gbp(R.bs,2)]:null,["Tax, NI and other deductions on it",gbp(R.bg-R.bs-C.bonusNet,2)],["Bonus take-home",gbp(C.bonusNet,2),1],["Share of the bonus kept",pc(C.bonusNet/R.bg)]]):"";
   $("bonusNote").textContent=R.bg?"Take-home is the extra pay over the year compared with having no bonus. The bonus month payslip is on the main screen.":"Enter a bonus as an amount or as a % of salary to see what it pays after deductions.";
@@ -571,9 +629,9 @@ function update(){
   if(R.rows.some(r=>r.cash<=0&&r.basic>0))notes.push(["warn","In at least one month the deductions use up all of your pay. Check the amounts entered."]);
   if(S.method!=="sacrifice"&&eePen>0)notes.push(["ok","Your pension is not taken by salary sacrifice, so you pay NI on that money. Salary sacrifice, where offered, usually leaves more take-home."]);
   if(R.cb&&R.charge===0)notes.push(["ok","Income is at or under £60,000, so no Child Benefit is repaid."]);
-  $("effNotes").innerHTML=notes.map(([k,t])=>`<p class="status${k==="warn"?" warn":""}" style="margin-top:0;margin-bottom:6px">${t}</p>`).join("");
+  $("effNotes").innerHTML=notes.map(([k,t])=>`<p class="status${k==="warn"?" warn":""}" style="margin-top:0;margin-bottom:.5rem">${t}</p>`).join("");
   const al=$("alert");al.hidden=!notes.length;
-  if(notes.length){$("alertTxt").textContent=notes[0][1]+(notes.length>1?` (+${notes.length-1} more in Detail)`:"");al.className="alert"+(notes[0][0]==="warn"?" warn":"");}
+  if(notes.length){$("alertTxt").textContent=notes[0][1];$("alertMore").textContent=notes.length>1?`+${notes.length-1} more ›`:"Detail ›";al.className="alert"+(notes[0][0]==="warn"?" warn":"");}
   const LINES=[["basic","Basic pay"],R.bg?["bonus","Bonus"]:null,
     S.method==="sacrifice"?["sacPen","less Pension (salary sacrifice)"]:null,
     sch?["sch","less Salary sacrifice schemes"]:null,bsac?["bsac","less Bonus into pension"]:null,
@@ -585,8 +643,13 @@ function update(){
   let h="<thead><tr><th>Line</th>"+MONTHS.map(m=>`<th>${m}</th>`).join("")+"<th>Total</th></tr></thead><tbody>";
   for(const [k,label,kind] of LINES){h+=`<tr class="${kind||""}"><td>${label}</td>`+R.rows.map(r=>`<td>${gbp(r[k],2)}</td>`).join("")+`<td class="tot">${gbp(sum(k),2)}</td></tr>`;}
   $("tbl").innerHTML=h+"</tbody>";
+  fit();
 }
-if(typeof document!=="undefined"&&document.getElementById("tbl")){/*TEST*/bind();syncForm();}
+if(typeof document!=="undefined"&&document.getElementById("tbl")){
+  bind();syncForm();
+  // keeps a copy of the app files (never anything you enter) so it opens quickly and works offline
+  if("serviceWorker" in navigator&&isSecureContext&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
 </script>
 </body>
 </html>
