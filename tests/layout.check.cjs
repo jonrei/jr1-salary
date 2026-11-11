@@ -12,7 +12,8 @@ const ROOT = path.join(__dirname, "..");
 const TYPES = { ".html": "text/html", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png", ".js": "text/javascript", ".webmanifest": "application/manifest+json" };
 const SIZES = [[320, 568], [360, 560], [360, 640], [360, 700], [375, 667], [390, 664], [412, 780], [430, 800], [480, 900]];
 
-// States to check: empty, a plain salary, and the fullest screen (every legend row, a warning and a solved target).
+// States to check: empty, a plain salary, the fullest Take-home screen (every legend row, a warning and a solved target),
+// and the Pension pot screen empty and with everything filled in.
 const STATES = {
   empty: async () => {},
   simple: async (p) => { await p.fill("#salary", "42000"); },
@@ -23,6 +24,12 @@ const STATES = {
     await p.click('[data-open="shPost"]'); await p.click("#addPost"); await p.fill("#post0a", "150"); await p.click("#shPost .done");
     await p.click('[data-open="shMore"]'); await p.selectOption("#loan", "p2"); await p.fill("#children", "2"); await p.click("#shMore .done");
     await p.fill("#netTarget", "5100"); await p.click("#optBtn");
+  },
+  potEmpty: async (p) => { await p.click("#tabPot"); },
+  potFull: async (p) => {
+    await p.fill("#salary", "118000"); await p.click("#tabPot");
+    await p.fill("#ppAge", "24"); await p.fill("#ppRetire", "60"); await p.fill("#ppPot", "1250000"); await p.fill("#ppMonthly", "2500");
+    await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
   },
 };
 
@@ -49,9 +56,9 @@ const STATES = {
     const m = await page.evaluate(() => {
       const app = document.getElementById("app"), right = app.getBoundingClientRect().right;
       const wide = [...app.querySelectorAll("*")].filter((e) => e.getBoundingClientRect().right > right + 0.5).map((e) => e.id || e.className || e.tagName);
-      const cs = getComputedStyle(app), kids = [...app.children].filter((e) => e.offsetHeight > 0);
-      const spare = app.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - kids.reduce((t, e) => t + e.offsetHeight, 0) - parseFloat(cs.rowGap) * (kids.length - 1);
-      return { spare: Math.round(spare), bars: !document.getElementById("months").hidden, over: app.scrollHeight - app.clientHeight, side: document.documentElement.scrollWidth - innerWidth, wide,
+      const scr = app.querySelector(".screen:not([hidden])"), kids = [...scr.children].filter((e) => e.offsetHeight > 0);
+      const spare = scr.clientHeight - kids.reduce((t, e) => t + e.offsetHeight, 0) - parseFloat(getComputedStyle(scr).rowGap) * (kids.length - 1);
+      return { spare: Math.round(spare), bars: !document.getElementById("months").hidden && scr.id === "scPay", over: app.scrollHeight - app.clientHeight, side: document.documentElement.scrollWidth - innerWidth, wide,
         stored: localStorage.length + sessionStorage.length + document.cookie.length, rem: parseFloat(getComputedStyle(document.documentElement).fontSize) };
     });
     if (m.over > 0) problems.push(`${tag}: main screen is ${m.over}px too tall, so it scrolls`);
