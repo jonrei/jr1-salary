@@ -5,8 +5,9 @@ Read `README.md` first. It holds the ethos, the file list and how the screen is 
 ## Rules
 
 - **Nothing is saved or sent.** No localStorage, cookies, analytics, third-party scripts or network calls. Do not weaken the content security policy in `index.html`.
-- **The main screen never scrolls** on a phone. Run `npm run check:layout` after any change to the main screen; it must pass at every size. New inputs go in a panel opened from the main screen unless Jon asks otherwise.
+- **Neither screen scrolls** on a phone (Take-home and Pension pot). Run `npm run check:layout` after any change to either; it must pass at every size. New inputs go in a panel opened from the screen unless Jon asks otherwise.
 - **The goal is take-home pay** after tax, NI and deductions, quick to use on a phone. Do not add features that slow that down.
+- **Pension pot defaults stay cautious** and every figure is in today's money. Say "estimate, not financial advice".
 - One HTML file, no build step, no framework, no runtime packages. Sizes in `rem`, never `px`, except the 16px minimum on form fields.
 - Every change to the tax maths needs a test in `tests/calc.test.mjs` with the expected figure worked out by hand.
 - Meet WCAG AA contrast in light and dark mode.
