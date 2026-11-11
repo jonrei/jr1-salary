@@ -96,16 +96,11 @@ label.warn{color:var(--warn)}
 .chip:active{border-color:var(--accent)}
 /* the answer comes first, so it stays in view above the keyboard while the salary is typed */
 .hero{border-color:var(--accent)}
+/* on taller phones the Take-home screen's spare height goes to the result and the scale, not to gaps */
+#scPay .hero{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
+#scPay .scalebox{flex:1 1 auto;display:flex;flex-direction:column}
+#scPay .scale{flex:1 1 2.3rem;height:auto;min-height:2.3rem}
 .heroTop{display:grid;grid-template-columns:8.4rem minmax(0,1fr);gap:.9rem;align-items:center}
-/* month bars: shown only on screens with height to spare (see fit() in the script); tap a bar to see that month */
-#months{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:.25rem;margin-top:.5rem;padding-top:.4rem;border-top:1px solid var(--line)}
-.col{display:flex;flex-direction:column;min-width:0;height:100%;border:0;background:none;padding:0;cursor:pointer;text-align:center;color:var(--muted)}
-.col .track{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:flex-end}
-.col .val{font-family:var(--num);font-size:.72rem;letter-spacing:-.04em;white-space:nowrap}
-.col .bar{background:var(--accent);opacity:.4;border-radius:.25rem .25rem 0 0;min-height:2px}
-.col .m{font-size:.75rem;padding-top:.1rem;border-top:1px solid var(--line)}
-.col.on{color:var(--ink);font-weight:600}
-.col.on .bar{opacity:1}
 .donut{width:8.4rem;height:8.4rem;display:block}
 .donut circle{fill:none;stroke-width:5.2}
 .donut .bgc{stroke:var(--line)}
@@ -148,7 +143,9 @@ label.warn{color:var(--warn)}
 .inc em{font-style:normal;color:var(--muted);font-size:.85rem;text-align:right}
 .inc .tot{border-top:1px solid var(--line);padding-top:.2rem;font-weight:700}
 .potbox{flex:1 1 6rem;min-height:6rem;display:flex;flex-direction:column}
-.pbars{flex:1 1 auto;min-height:0;display:flex;align-items:flex-end;gap:1px;margin-top:.45rem;border-bottom:1px solid var(--line)}
+.pbars{flex:1 1 auto;min-height:0;display:flex;align-items:flex-end;gap:1px;margin-top:.45rem;border-bottom:1px solid var(--line);cursor:pointer;touch-action:none;border-radius:.2rem}
+.pbars div{opacity:.5}
+.pbars div.on{opacity:1}
 .pbars div{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
 .pbars i{display:block}
 .pbars .g{background:var(--accent);border-radius:.15rem .15rem 0 0}
@@ -224,7 +221,6 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
       <div class="leg" id="legend"></div>
     </div>
     </div>
-    <div id="months" role="group" aria-label="Take-home pay each month" hidden></div>
   </section>
 
   <section class="box" aria-label="Your pay">
@@ -329,8 +325,8 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   </nav>
 
   <section class="box potbox" aria-label="Pot by age">
-    <div class="hd"><strong>Pot by age</strong><span class="pl"><span><i class="b-paid"></i>your money</span><span><i class="b-grow"></i>growth</span></span></div>
-    <div class="pbars" id="pBars" role="img" aria-label="Pot size at each age"></div>
+    <div class="hd"><strong id="pRead">Pot by age</strong><span class="pl"><span><i class="b-paid"></i>your money</span><span><i class="b-grow"></i>growth</span></span></div>
+    <div class="pbars" id="pBars" role="slider" tabindex="0" aria-label="Pot at age" aria-orientation="horizontal"></div>
     <div class="pax" id="pAx"></div>
   </section>
 
@@ -417,7 +413,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <dl class="kv" id="potKv" style="margin-top:0"></dl>
   <h3>Year by year</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Pot year by year"><table id="potTbl" style="width:100%"></table></div>
   <h3>How it is worked out</h3>
-  <p class="note">The pot grows by the growth rate each year, with the monthly payment added each month. Growth is the rate left after price rises and charges, and the monthly payment is assumed to rise with prices, so every figure is in today's money. 2% is a cautious growth rate. If you leave the monthly payment empty and have entered a salary on the Take-home screen, it uses your pension and your employer's from there.</p>
+  <p class="note">The pot grows by the growth rate each year, with the monthly payment added each month. Growth is the rate left after price rises and charges, and the monthly payment is assumed to rise with prices, so every figure is in today's money. 2% is a cautious growth rate. The monthly payment starts as your pension and your employer's from the Take-home screen, and follows it until you type your own figure. Empty the field to follow it again.</p>
   <p class="note">Income from the pot is the pot multiplied by the income rate. 3.5% a year is a cautious rate for an income meant to last through retirement. Income is shown before tax. You can normally take up to 25% of a pot tax free, and you cannot normally take a private pension before 55, rising to 57 in April 2028.</p>
   <p class="note">This is an estimate, not financial advice. Investments can fall as well as rise. Nothing you enter is saved or sent anywhere.</p>
 </div></dialog>
@@ -444,7 +440,7 @@ const monthsFor=y=>["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan",
 let MONTHS=monthsFor("2027");
 const blank=()=>({region:"eng",salary:null,pensionMode:"pct",eePct:5,erPct:3,netTarget:null,method:"sacrifice",
   bonusType:"amount",bonusValue:null,bonusMonth:12,bsType:"none",bsValue:null,
-  viewMonth:null,risePct:null,riseFrom:1,bik:null,allowance:12570,loan:"",pg:"0",children:null,sac:[],post:[],year:"2027",
+  viewMonth:null,risePct:null,riseFrom:1,bik:null,allowance:12570,loan:"",pg:"0",children:null,sac:[],post:[],year:"2027",ppView:null,
   // pension pot screen: cautious defaults
   ppAge:null,ppRetire:67,ppPot:null,ppMonthly:null,ppGrowth:2,ppDraw:3.5,spOn:true,spWeekly:241.30,spAge:67});
 let S=blank();   // held in memory only: never written to storage
@@ -554,10 +550,9 @@ function potCalc(s,monthly){
 const $=id=>document.getElementById(id);
 const NUM=["salary","eePct","erPct","netTarget","bonusValue","bsValue","risePct","bik","allowance","children","ppAge","ppRetire","ppPot","ppMonthly","ppGrowth","ppDraw","spWeekly","spAge"];
 const SEL=["region","method","bonusMonth","bsType","riseFrom","loan","pg","year"];
-let TAB="pay",FROM_PAY=0;
+let TAB="pay",FROM_PAY=0,PAY_C=null,POT=null;
 const monthOpts=(sel,val)=>{sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}"${i+1==val?" selected":""}>${m}</option>`).join("");};
 const setSeg=(a,b,on)=>{$(a).setAttribute("aria-pressed",on);$(b).setAttribute("aria-pressed",!on);};
-const short=x=>x>=99950?Math.round(x/1000)+"k":x>=1000?(x/1000).toFixed(1)+"k":Math.round(x)+"";
 // salary and target are shown with thousands separators, so they are text fields, not number fields
 const MONEY=["salary","netTarget","ppPot","ppMonthly"];
 const show=id=>S[id]==null?"":MONEY.includes(id)?S[id].toLocaleString("en-GB",{maximumFractionDigits:2}):S[id];
@@ -582,6 +577,13 @@ function bind(){
     // an empty age starts at 40, and an empty monthly payment starts from the figure taken from the Take-home screen
     const from=S[id]!=null?S[id]:id==="ppAge"?40- +b.dataset.d:id==="ppMonthly"?Math.round(FROM_PAY):0;
     S[id]=Math.max(0,Math.round((from+ +b.dataset.d)*100)/100);$(id).value=show(id);update();}));
+  const bars=$("pBars"),at=e=>{if(!POT)return;const r=bars.getBoundingClientRect(),n=POT.rows.length;
+    pickAge(POT.age+Math.min(n-1,Math.max(0,Math.floor((e.clientX-r.left)/r.width*n))));};
+  bars.addEventListener("pointerdown",e=>{bars.setPointerCapture(e.pointerId);at(e);});
+  bars.addEventListener("pointermove",e=>{if(e.buttons||e.pointerType==="touch")at(e);});
+  bars.addEventListener("keydown",e=>{const d={ArrowLeft:-1,ArrowDown:-1,ArrowRight:1,ArrowUp:1}[e.key];
+    if(d&&POT){e.preventDefault();pickAge((S.ppView==null?POT.ret:S.ppView)+d);}});
+  $("ppMonthly").addEventListener("blur",()=>update());
   $("tabPay").addEventListener("click",()=>setTab("pay"));
   $("tabPot").addEventListener("click",()=>setTab("pot"));
   $("spYes").addEventListener("click",()=>{S.spOn=true;update();});
@@ -601,9 +603,6 @@ function bind(){
   $("addPost").addEventListener("click",()=>{S.post.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("post");update();});
   $("reset").addEventListener("click",()=>{S=blank();syncForm();});
   $("viewMonth").addEventListener("change",e=>{S.viewMonth=+e.target.value;update();});
-  $("months").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;S.viewMonth=+b.dataset.m;update();
-    const again=$("months").querySelector(`[data-m="${S.viewMonth}"]`);if(again)again.focus();});
-  addEventListener("resize",fit);
   $("optBtn").addEventListener("click",()=>{
     if(S.pensionMode==="target"){if(v(S.salary)>0&&v(S.netTarget)>0)S.eePct=Math.round(compute(S).pct*10)/10;S.pensionMode="pct";syncForm();return;}
     if(!(v(S.netTarget)>0)){needTarget(true);$("netTarget").focus();return;}
@@ -637,16 +636,6 @@ function renderList(key){
 const kv=rows=>rows.filter(Boolean).map(([k,val,tot])=>`<dt class="${tot?"tot":""}">${k}</dt><dd class="${tot?"tot":""}">${val}</dd>`).join("");
 // the target label turns into a prompt when the button needs a target to work with
 function needTarget(on){const l=$("tgtLbl");l.textContent=on?"Enter a target first £":"Monthly target £";l.classList.toggle("warn",on);}
-// Month bars use whatever height is left over. They are left out when the screen has no room, so the page never scrolls.
-function fit(){
-  const app=$("scPay"),box=$("months");box.hidden=true;
-  if(!box.firstChild)return;
-  const cs=getComputedStyle(app),rem=parseFloat(getComputedStyle(document.documentElement).fontSize),gap=parseFloat(cs.rowGap)||0;
-  const kids=[...app.children].filter(el=>el.offsetHeight>0);
-  const spare=app.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-kids.reduce((a,el)=>a+el.offsetHeight,0)-gap*(kids.length-1);
-  const h=Math.min(spare-.5*rem-2,8*rem);
-  if(h>=5.5*rem){box.style.height=Math.floor(h)+"px";box.hidden=false;}
-}
 function setTab(t){
   TAB=t;$("scPay").hidden=t!=="pay";$("scPot").hidden=t!=="pot";
   $("tabPay").setAttribute("aria-selected",t==="pay");$("tabPot").setAttribute("aria-selected",t==="pot");
@@ -659,31 +648,34 @@ function ratesText(s){
     +` National Insurance: 8% on £12,570 to £50,270 a year, 2% above. Student loans: 9% above ${gbp(L.p1)} (Plan 1), ${gbp(L.p2)} (Plan 2), ${gbp(L.p4)} (Plan 4), ${gbp(L.p5)} (Plan 5); postgraduate 6% above ${gbp(L.pg)}.`
     +` Child Benefit: ${gbp(y.cb.first,2)} a week for the first child, ${gbp(y.cb.other,2)} for each other child; the charge is 1% for each £200 of income over £60,000.`;
 }
-function update(){const C=updatePay();updatePot(C||null);}
+function update(){PAY_C=updatePay()||null;updatePot(PAY_C);}
 function updatePot(payC){
-  FROM_PAY=payC?(payC.R.sum("pen")+payC.R.sum("bsac")+payC.R.sum("emp"))/12:0;
-  const monthly=S.ppMonthly!=null?S.ppMonthly:FROM_PAY;
-  $("ppMonthly").placeholder=FROM_PAY>0?Math.round(FROM_PAY).toLocaleString("en-GB")+" from pay":"0";
+  FROM_PAY=payC?Math.round((payC.R.sum("pen")+payC.R.sum("bsac")+payC.R.sum("emp"))/12*100)/100:0;
+  // The monthly payment carries over from the Take-home screen (yours plus your employer's) and follows it
+  // until the user types their own figure. Emptying the field links it again.
+  const linked=S.ppMonthly==null,monthly=linked?FROM_PAY:S.ppMonthly;
+  if(linked&&document.activeElement!==$("ppMonthly"))$("ppMonthly").value=FROM_PAY>0?FROM_PAY.toLocaleString("en-GB",{maximumFractionDigits:2}):"";
   setSeg("spYes","spNo",S.spOn);
   chip("cSP",S.spOn?`${gbp(v(S.spWeekly),2)} a week from ${Math.floor(v(S.spAge))}`:"not included",S.spOn);
   const ok=v(S.ppAge)>0&&v(S.ppRetire)>v(S.ppAge);
   if(!ok){
     $("pCap").textContent="Pension pot when you retire, in today's money";$("pPot").textContent="—";
     $("pSub").textContent=v(S.ppAge)>0?"Retirement age must be above your age":"Enter your age to see the forecast";
+    POT=null;$("pRead").textContent="Pot by age";
     ["pInc","pBars","pAx","potKv","potTbl","spKv"].forEach(id=>$(id).innerHTML="");["p1","p2","p3","p4"].forEach(id=>$(id).textContent="—");
     return;
   }
-  const P=potCalc(S,monthly),later=P.spFrom>P.ret;
+  const P=POT=potCalc(S,monthly),later=P.spFrom>P.ret;
   $("pCap").textContent=`Pension pot at ${P.ret}, in today's money`;
   $("pPot").textContent=gbp(P.pot);
-  $("pSub").textContent=`${P.yrs} year${P.yrs===1?"":"s"} away · ${gbp(monthly)} a month paid in`;
+  $("pSub").textContent=`${P.yrs} year${P.yrs===1?"":"s"} away · ${gbp(monthly)} a month ${linked&&FROM_PAY>0?"from your pay":"paid in"}`;
   const line=(t,a,cls="")=>`<span class="${cls}">${t}</span><b class="${cls}">${gbp(a)}</b><b class="${cls}">${gbp(a/12)}</b>`;
   $("pInc").innerHTML=`<span></span><em>a year</em><em>a month</em>`+line(`From the pot at ${v(S.ppDraw)}%`,P.income)
     +(S.spOn?line(`State Pension${later?" from "+P.spFrom:""}`,P.sp)+line(`Total${later?" from "+P.spFrom:""}`,P.total,"tot"):"");
   const mx=Math.max(1,P.pot);
   $("pBars").innerHTML=P.rows.map(r=>`<div title="Age ${r.age}: ${gbp(r.pot)}"><i class="g" style="flex:0 0 ${Math.max(0,r.pot-r.paid)/mx*100}%"></i><i class="p" style="flex:0 0 ${Math.min(r.pot,r.paid)/mx*100}%"></i></div>`).join("");
-  const mid=P.age+Math.round(P.yrs/2);
-  $("pAx").innerHTML=`<span>age ${P.age}</span>${P.yrs>3?`<span>${mid}</span>`:""}<span>${P.ret}</span>`;
+  $("pAx").innerHTML=`<span>age ${P.age}</span><span>tap a bar for its value</span><span>${P.ret}</span>`;
+  paintPick();
   $("p1").textContent=P.yrs;$("p2").textContent=gbpShort(P.paidIn);$("p3").textContent=gbpShort(P.growth);
   $("p4").textContent=payC&&payC.typical>0?pc(P.total/12/payC.typical,0):"—";
   $("spKv").innerHTML=S.spOn?kv([["State Pension a year",gbp(P.sp)],["State Pension a month",gbp(P.sp/12)],later?[`Paid from age`,P.spFrom]:null]):"";
@@ -693,6 +685,16 @@ function updatePot(payC){
   $("potTbl").innerHTML="<thead><tr><th>Age</th><th>Paid in</th><th>Growth</th><th>Pot</th></tr></thead><tbody>"
     +P.rows.map(r=>`<tr class="${r.age===P.ret?"key":""}"><td>${r.age}</td><td>${gbp(r.paid)}</td><td>${gbp(r.pot-r.paid)}</td><td>${gbp(r.pot)}</td></tr>`).join("")+"</tbody>";
 }
+// The chart shows the pot at one age: retirement to begin with, then whichever bar is tapped or dragged to.
+function paintPick(){
+  if(!POT)return;
+  const age=Math.min(POT.ret,Math.max(POT.age,S.ppView==null?POT.ret:S.ppView)),r=POT.rows[age-POT.age],b=$("pBars");
+  [...b.children].forEach((el,i)=>el.classList.toggle("on",i===age-POT.age));
+  $("pRead").textContent=`Age ${age}: ${gbp(r.pot)}`;
+  b.setAttribute("aria-valuemin",POT.age);b.setAttribute("aria-valuemax",POT.ret);b.setAttribute("aria-valuenow",age);
+  b.setAttribute("aria-valuetext",`Age ${age}: pot ${gbp(r.pot)}, of which ${gbp(r.pot-r.paid)} is growth`);
+}
+function pickAge(age){if(!POT)return;S.ppView=Math.min(POT.ret,Math.max(POT.age,age));paintPick();}
 function chip(id,text,on){const el=$(id);el.textContent=text;el.parentElement.classList.toggle("on",!!on);}
 function donut(parts,centre,sub){
   let off=25,h='<circle class="bgc" cx="21" cy="21" r="15.915"/>';
@@ -751,7 +753,7 @@ function updatePay(){
     donut([],"—","of pay kept");$("legend").innerHTML="";$("penCap").textContent="";$("scCap").textContent="";
     drawScale(null);
     $("penBar").innerHTML="";$("penLeg").innerHTML="";["e1","e2","e3","e4"].forEach(id=>$(id).textContent="—");
-    $("alert").hidden=true;if(target)$("eePct").value="";$("months").innerHTML="";fit();
+    $("alert").hidden=true;if(target)$("eePct").value="";
     ["pctResult","status","penNote","bonusNote"].forEach(id=>$(id).textContent="");$("bonusKv").innerHTML="";
     $("tbl").innerHTML="";$("effNotes").innerHTML="";$("penKv").innerHTML="";$("effKv").innerHTML="";
     return;
@@ -774,8 +776,6 @@ function updatePay(){
   const tot=parts.reduce((a,p)=>a+p.a,0)||1;parts.forEach(p=>p.share=p.a/tot);
   donut(parts,Math.round(Math.max(0,mr.net)/tot*100)+"%","of pay kept");
   $("legend").innerHTML=parts.map(p=>`<i class="b-${p.k}"></i><span>${p.t}</span><b>${gbp(p.a)}</b><em>${pc(p.share,0)}</em>`).join("");
-  const mx=Math.max(1,...R.rows.map(r=>r.net));
-  $("months").innerHTML=R.rows.map(r=>`<button type="button" class="col${r.n===vm?" on":""}" data-m="${r.n}" aria-pressed="${r.n===vm}" aria-label="${MONTHS[r.n-1]}: ${gbp(r.net)} take-home"><span class="track"><span class="val">${short(Math.max(0,r.net))}</span><span class="bar" style="flex:0 0 ${Math.max(0,r.net)/mx*78}%"></span></span><span class="m">${MONTHS[r.n-1].slice(0,3)}</span></button>`).join("");
   drawScale(C);
   const sal=v(S.salary),penAll=yourPen+emp;
   $("penCap").textContent=`${gbp(penAll)} · ${pc(penAll/sal)} of salary`;
@@ -824,7 +824,6 @@ function updatePay(){
   let h="<thead><tr><th>Line</th>"+MONTHS.map(m=>`<th>${m}</th>`).join("")+"<th>Total</th></tr></thead><tbody>";
   for(const [k,label,kind] of LINES){h+=`<tr class="${kind||""}"><td>${label}</td>`+R.rows.map(r=>`<td>${gbp(r[k],2)}</td>`).join("")+`<td class="tot">${gbp(sum(k),2)}</td></tr>`;}
   $("tbl").innerHTML=h+"</tbody>";
-  fit();
   return C;
 }
 if(typeof document!=="undefined"&&document.getElementById("tbl")){
