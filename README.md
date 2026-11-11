@@ -33,7 +33,7 @@ npm run check:layout     # phone-screen fit; needs Playwright (npx playwright in
 
 ## How the screen fits every phone
 
-Every size in the CSS is in `rem`. `1rem` is set from the screen so the page is always 30rem wide and 53.4rem tall: 12px on a 360 x 640 screen, larger on bigger phones, smaller on shorter ones. Anything added to either screen has to fit inside that box; `npm run check:layout` says by how much. On taller phones the spare height shows a bar for each month's take-home.
+Every size in the CSS is in `rem`. `1rem` is set from the screen so the page is always 30rem wide and 53.4rem tall: 12px on a 360 x 640 screen, larger on bigger phones, smaller on shorter ones. Anything added to either screen has to fit inside that box; `npm run check:layout` says by how much. On taller phones the spare height is shared between the boxes.
 
 ## Hosting
 

@@ -58,14 +58,14 @@ const STATES = {
       const wide = [...app.querySelectorAll("*")].filter((e) => e.getBoundingClientRect().right > right + 0.5).map((e) => e.id || e.className || e.tagName);
       const scr = app.querySelector(".screen:not([hidden])"), kids = [...scr.children].filter((e) => e.offsetHeight > 0);
       const spare = scr.clientHeight - kids.reduce((t, e) => t + e.offsetHeight, 0) - parseFloat(getComputedStyle(scr).rowGap) * (kids.length - 1);
-      return { spare: Math.round(spare), bars: !document.getElementById("months").hidden && scr.id === "scPay", over: app.scrollHeight - app.clientHeight, side: document.documentElement.scrollWidth - innerWidth, wide,
+      return { spare: Math.round(spare), over: app.scrollHeight - app.clientHeight, side: document.documentElement.scrollWidth - innerWidth, wide,
         stored: localStorage.length + sessionStorage.length + document.cookie.length, rem: parseFloat(getComputedStyle(document.documentElement).fontSize) };
     });
     if (m.over > 0) problems.push(`${tag}: main screen is ${m.over}px too tall, so it scrolls`);
     if (m.side > 0 || m.wide.length) problems.push(`${tag}: content runs off the side (${m.wide.join(", ") || m.side + "px"})`);
     if (m.stored) problems.push(`${tag}: something was written to browser storage`);
     if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `${w}x${h}-${name}.png`) });
-    console.log(`${tag}: ${m.over > 0 ? "TOO TALL by " + m.over + "px" : "fits, " + m.spare + "px spare"}${m.bars ? ", month bars shown" : ""} (1rem = ${m.rem.toFixed(1)}px)`);
+    console.log(`${tag}: ${m.over > 0 ? "TOO TALL by " + m.over + "px" : "fits, " + m.spare + "px spare"} (1rem = ${m.rem.toFixed(1)}px)`);
     await page.close();
   }
   await browser.close(); server.close();

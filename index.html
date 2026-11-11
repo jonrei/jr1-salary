@@ -96,16 +96,11 @@ label.warn{color:var(--warn)}
 .chip:active{border-color:var(--accent)}
 /* the answer comes first, so it stays in view above the keyboard while the salary is typed */
 .hero{border-color:var(--accent)}
+/* on taller phones the Take-home screen's spare height goes to the result and the scale, not to gaps */
+#scPay .hero{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
+#scPay .scalebox{flex:1 1 auto;display:flex;flex-direction:column}
+#scPay .scale{flex:1 1 2.3rem;height:auto;min-height:2.3rem}
 .heroTop{display:grid;grid-template-columns:8.4rem minmax(0,1fr);gap:.9rem;align-items:center}
-/* month bars: shown only on screens with height to spare (see fit() in the script); tap a bar to see that month */
-#months{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:.25rem;margin-top:.5rem;padding-top:.4rem;border-top:1px solid var(--line)}
-.col{display:flex;flex-direction:column;min-width:0;height:100%;border:0;background:none;padding:0;cursor:pointer;text-align:center;color:var(--muted)}
-.col .track{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:flex-end}
-.col .val{font-family:var(--num);font-size:.72rem;letter-spacing:-.04em;white-space:nowrap}
-.col .bar{background:var(--accent);opacity:.4;border-radius:.25rem .25rem 0 0;min-height:2px}
-.col .m{font-size:.75rem;padding-top:.1rem;border-top:1px solid var(--line)}
-.col.on{color:var(--ink);font-weight:600}
-.col.on .bar{opacity:1}
 .donut{width:8.4rem;height:8.4rem;display:block}
 .donut circle{fill:none;stroke-width:5.2}
 .donut .bgc{stroke:var(--line)}
@@ -226,7 +221,6 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
       <div class="leg" id="legend"></div>
     </div>
     </div>
-    <div id="months" role="group" aria-label="Take-home pay each month" hidden></div>
   </section>
 
   <section class="box" aria-label="Your pay">
@@ -559,7 +553,6 @@ const SEL=["region","method","bonusMonth","bsType","riseFrom","loan","pg","year"
 let TAB="pay",FROM_PAY=0,PAY_C=null,POT=null;
 const monthOpts=(sel,val)=>{sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}"${i+1==val?" selected":""}>${m}</option>`).join("");};
 const setSeg=(a,b,on)=>{$(a).setAttribute("aria-pressed",on);$(b).setAttribute("aria-pressed",!on);};
-const short=x=>x>=99950?Math.round(x/1000)+"k":x>=1000?(x/1000).toFixed(1)+"k":Math.round(x)+"";
 // salary and target are shown with thousands separators, so they are text fields, not number fields
 const MONEY=["salary","netTarget","ppPot","ppMonthly"];
 const show=id=>S[id]==null?"":MONEY.includes(id)?S[id].toLocaleString("en-GB",{maximumFractionDigits:2}):S[id];
@@ -610,9 +603,6 @@ function bind(){
   $("addPost").addEventListener("click",()=>{S.post.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("post");update();});
   $("reset").addEventListener("click",()=>{S=blank();syncForm();});
   $("viewMonth").addEventListener("change",e=>{S.viewMonth=+e.target.value;update();});
-  $("months").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;S.viewMonth=+b.dataset.m;update();
-    const again=$("months").querySelector(`[data-m="${S.viewMonth}"]`);if(again)again.focus();});
-  addEventListener("resize",fit);
   $("optBtn").addEventListener("click",()=>{
     if(S.pensionMode==="target"){if(v(S.salary)>0&&v(S.netTarget)>0)S.eePct=Math.round(compute(S).pct*10)/10;S.pensionMode="pct";syncForm();return;}
     if(!(v(S.netTarget)>0)){needTarget(true);$("netTarget").focus();return;}
@@ -646,16 +636,6 @@ function renderList(key){
 const kv=rows=>rows.filter(Boolean).map(([k,val,tot])=>`<dt class="${tot?"tot":""}">${k}</dt><dd class="${tot?"tot":""}">${val}</dd>`).join("");
 // the target label turns into a prompt when the button needs a target to work with
 function needTarget(on){const l=$("tgtLbl");l.textContent=on?"Enter a target first £":"Monthly target £";l.classList.toggle("warn",on);}
-// Month bars use whatever height is left over. They are left out when the screen has no room, so the page never scrolls.
-function fit(){
-  const app=$("scPay"),box=$("months");box.hidden=true;
-  if(!box.firstChild)return;
-  const cs=getComputedStyle(app),rem=parseFloat(getComputedStyle(document.documentElement).fontSize),gap=parseFloat(cs.rowGap)||0;
-  const kids=[...app.children].filter(el=>el.offsetHeight>0);
-  const spare=app.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-kids.reduce((a,el)=>a+el.offsetHeight,0)-gap*(kids.length-1);
-  const h=Math.min(spare-.5*rem-2,8*rem);
-  if(h>=5.5*rem){box.style.height=Math.floor(h)+"px";box.hidden=false;}
-}
 function setTab(t){
   TAB=t;$("scPay").hidden=t!=="pay";$("scPot").hidden=t!=="pot";
   $("tabPay").setAttribute("aria-selected",t==="pay");$("tabPot").setAttribute("aria-selected",t==="pot");
@@ -773,7 +753,7 @@ function updatePay(){
     donut([],"—","of pay kept");$("legend").innerHTML="";$("penCap").textContent="";$("scCap").textContent="";
     drawScale(null);
     $("penBar").innerHTML="";$("penLeg").innerHTML="";["e1","e2","e3","e4"].forEach(id=>$(id).textContent="—");
-    $("alert").hidden=true;if(target)$("eePct").value="";$("months").innerHTML="";fit();
+    $("alert").hidden=true;if(target)$("eePct").value="";
     ["pctResult","status","penNote","bonusNote"].forEach(id=>$(id).textContent="");$("bonusKv").innerHTML="";
     $("tbl").innerHTML="";$("effNotes").innerHTML="";$("penKv").innerHTML="";$("effKv").innerHTML="";
     return;
@@ -796,8 +776,6 @@ function updatePay(){
   const tot=parts.reduce((a,p)=>a+p.a,0)||1;parts.forEach(p=>p.share=p.a/tot);
   donut(parts,Math.round(Math.max(0,mr.net)/tot*100)+"%","of pay kept");
   $("legend").innerHTML=parts.map(p=>`<i class="b-${p.k}"></i><span>${p.t}</span><b>${gbp(p.a)}</b><em>${pc(p.share,0)}</em>`).join("");
-  const mx=Math.max(1,...R.rows.map(r=>r.net));
-  $("months").innerHTML=R.rows.map(r=>`<button type="button" class="col${r.n===vm?" on":""}" data-m="${r.n}" aria-pressed="${r.n===vm}" aria-label="${MONTHS[r.n-1]}: ${gbp(r.net)} take-home"><span class="track"><span class="val">${short(Math.max(0,r.net))}</span><span class="bar" style="flex:0 0 ${Math.max(0,r.net)/mx*78}%"></span></span><span class="m">${MONTHS[r.n-1].slice(0,3)}</span></button>`).join("");
   drawScale(C);
   const sal=v(S.salary),penAll=yourPen+emp;
   $("penCap").textContent=`${gbp(penAll)} · ${pc(penAll/sal)} of salary`;
@@ -846,7 +824,6 @@ function updatePay(){
   let h="<thead><tr><th>Line</th>"+MONTHS.map(m=>`<th>${m}</th>`).join("")+"<th>Total</th></tr></thead><tbody>";
   for(const [k,label,kind] of LINES){h+=`<tr class="${kind||""}"><td>${label}</td>`+R.rows.map(r=>`<td>${gbp(r[k],2)}</td>`).join("")+`<td class="tot">${gbp(sum(k),2)}</td></tr>`;}
   $("tbl").innerHTML=h+"</tbody>";
-  fit();
   return C;
 }
 if(typeof document!=="undefined"&&document.getElementById("tbl")){
