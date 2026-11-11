@@ -2,5 +2,8 @@
   "name": "jr1-salary",
   "private": true,
   "description": "UK take-home pay calculator at salary.jr1.com",
-  "scripts": { "test": "node --test tests/*.test.mjs" }
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check:layout": "node tests/layout.check.cjs"
+  }
 }
