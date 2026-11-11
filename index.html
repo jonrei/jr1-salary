@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Take-Home Pay Calculator</title>
+<meta name="description" content="UK take-home pay calculator for 2027/28. Works in your browser; nothing is saved or sent.">
+<meta name="theme-color" content="#0f6b4f">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/ibm-plex-mono-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Fonts are served from this site so the page makes no third-party requests. IBM Plex, SIL Open Font Licence (fonts/OFL.txt). */
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-sans-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/ibm-plex-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+:root{
+  /* Layout: one fixed phone screen, no page scroll. Inputs, chips, donut, month bars, pension bar, four stats. Extras open as panels. */
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#16211d; --muted:#5c6b65; --line:#d6ddda;
+  --accent:#0f6b4f; --accent-soft:#e1f0ea; --warn:#a4560c; --warn-soft:#fbeedd; --good:#1f7a3a;
+  --tax:#b4553a; --ni:#c79a2b; --pen:#3f6fb0; --oth:#8a8f93; --on-accent:#ffffff;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1513; --surface:#18211e; --ink:#e7eeeb; --muted:#9aaba4; --line:#2c3a35;
+    --accent:#4cc39a; --accent-soft:#1c3a30; --warn:#f0a65a; --warn-soft:#3a2a17; --good:#6fd38f;
+    --tax:#e08a6f; --ni:#e0bb55; --pen:#7fa6de; --oth:#7d8a86; --on-accent:#0f1513;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#18211e; --ink:#e7eeeb; --muted:#9aaba4; --line:#2c3a35;
+  --accent:#4cc39a; --accent-soft:#1c3a30; --warn:#f0a65a; --warn-soft:#3a2a17; --good:#6fd38f;
+  --tax:#e08a6f; --ni:#e0bb55; --pen:#7fa6de; --oth:#7d8a86; --on-accent:#0f1513;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:12px;line-height:1.3}
+#app{height:100%;max-width:480px;margin:0 auto;padding:6px 16px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+.top{display:flex;align-items:baseline;gap:8px;flex:none}
+h1{font-size:13px;font-weight:700;margin:0;white-space:nowrap}
+.yr{color:var(--muted);font-size:10.5px;white-space:nowrap}
+.priv{margin-left:auto;font-size:10px;color:var(--good);background:var(--accent-soft);border-radius:99px;padding:1px 7px;white-space:nowrap}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0;flex:none}
+.g2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:6px}
+.g2 + .g2{margin-top:5px}
+.g2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+label,.lbl{display:block;font-size:9.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+input,select{font:inherit;color:var(--ink);background:var(--surface);min-width:0}
+.stepper{display:flex;border:1.5px solid var(--accent);border-radius:6px;overflow:hidden;height:28px}
+.stepper button{flex:0 0 24px;border:0;background:var(--accent-soft);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;padding:0}
+.stepper button:disabled{opacity:.4}
+.stepper input{flex:1 1 auto;width:100%;border:0;text-align:center;font-family:var(--num);font-size:13px;font-weight:600;padding:0;background:transparent;-moz-appearance:textfield}
+.stepper input::placeholder{font-size:10.5px;font-weight:500;color:var(--muted)}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.sel{width:100%;height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px}
+.chips{display:flex;gap:4px;flex:none}
+.chip{flex:1 1 0;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:3px 2px;font:inherit;font-size:10.5px;font-weight:600;cursor:pointer;text-align:center;line-height:1.15}
+.chip small{display:block;font-weight:500;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip.on small{color:var(--accent)}
+.hero{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center}
+.donut{width:92px;height:92px;display:block}
+.donut circle{fill:none;stroke-width:5.2}
+.donut .bgc{stroke:var(--line)}
+.donut text{fill:var(--ink);font-family:var(--num);font-weight:600}
+.donut .dsub{fill:var(--muted);font-family:var(--body);font-weight:500}
+.s-net{stroke:var(--accent)}.s-tax{stroke:var(--tax)}.s-ni{stroke:var(--ni)}.s-pen{stroke:var(--pen)}.s-oth{stroke:var(--oth)}
+.b-net{background:var(--accent)}.b-tax{background:var(--tax)}.b-ni{background:var(--ni)}.b-pen{background:var(--pen)}.b-oth{background:var(--oth)}.b-emp{background:var(--accent)}.b-bon{background:var(--ni)}
+.big{font-family:var(--num);font-size:21px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
+.cap{font-size:10px;color:var(--muted)}
+.msel{height:20px;border:1px solid var(--accent);border-radius:5px;font-size:11px;font-weight:600;padding:0 2px;color:var(--accent)}
+.leg{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:1px 6px;margin-top:4px;font-size:10.5px;align-items:center;font-variant-numeric:tabular-nums}
+.leg i{width:7px;height:7px;border-radius:2px;display:block}
+.leg b{font-family:var(--num);font-weight:600;text-align:right}
+.leg em{font-style:normal;color:var(--muted);text-align:right;font-size:9.5px}
+.barsbox{flex:1 1 60px;min-height:62px;display:flex;flex-direction:column}
+.hd{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:10.5px}
+.hd strong{font-weight:600}
+.hd span{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bars{flex:1 1 auto;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;align-items:end;min-height:0;margin-top:2px}
+.col{display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:0;text-align:center}
+.col .val{font-family:var(--num);font-size:8.5px;color:var(--muted);white-space:nowrap;letter-spacing:-.03em}
+.col .bar{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;opacity:.75}
+.col.bon .bar{opacity:1}
+.col.bon .val{color:var(--ink);font-weight:600}
+.col .m{font-size:9px;color:var(--muted);border-top:1px solid var(--line);padding-top:1px}
+.scalebox{flex:none}
+.scale{position:relative;height:26px;display:flex;border-radius:5px;margin-top:5px;background:var(--line)}
+.zone{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--num);font-size:9.5px;font-weight:600;color:var(--ink);overflow:hidden;border-right:1px solid var(--surface);position:relative}
+.zone:first-child{border-radius:5px 0 0 5px}.zone:last-of-type{border-radius:0 5px 5px 0;border-right:0}
+.zone::before{content:"";position:absolute;inset:0;background:var(--tax);opacity:var(--o)}
+.zone.free::before{background:var(--accent);opacity:.3}
+.zone span{position:relative}
+.mk{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2.5px solid var(--ink);z-index:2}
+.mk::after{content:"";position:absolute;top:-3px;left:-5.5px;border:4.5px solid transparent;border-top-color:var(--ink)}
+.mk.was{border-left:1.5px dashed var(--muted);top:0;bottom:0}.mk.was::after{display:none}
+.ticks{position:relative;height:12px;font-size:8.5px;color:var(--muted);font-family:var(--num);margin-bottom:1px}
+.ticks span{position:absolute;top:1px;transform:translateX(-50%);white-space:nowrap}
+.stack{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--line);margin:4px 0 3px}
+.stack span{display:block;height:100%}
+.pl{display:flex;flex-wrap:wrap;gap:1px 10px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pl i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:3px}
+.pl b{color:var(--ink);font-family:var(--num);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;flex:none}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 5px;min-width:0}
+.stat .v{font-family:var(--num);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .t{font-size:8.8px;color:var(--muted);line-height:1.15}
+.alert{flex:none;margin:0;font-size:10.5px;border-radius:6px;padding:4px 8px;border:0;width:100%;text-align:left;font-family:inherit;cursor:pointer;background:var(--accent-soft);color:var(--good);display:block}
+.alert span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.opt{width:100%;height:28px;border:1.5px solid var(--accent);border-radius:6px;background:var(--accent);color:var(--on-accent);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;padding:0 4px;white-space:nowrap}
+.opt[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* panels */
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column}
+.sheet.open{display:flex}
+.sheet header{flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.sheet h2{font-size:13px;margin:0}
+.sheet .body{flex:1 1 auto;overflow-y:auto;padding:10px 16px 20px;max-width:480px;width:100%;margin:0 auto}
+.done{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:6px;background:var(--accent);color:var(--on-accent);padding:6px 14px;cursor:pointer}
+.fg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.fg .full{grid-column:1/-1}
+.fg input,.fg select{width:100%;height:30px;border:1px solid var(--line);border-radius:6px;padding:0 7px;font-size:12.5px}
+.fg input[type=number]{font-family:var(--num)}
+.item{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px;margin-top:8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;height:30px}
+.seg button{flex:1;border:0;background:var(--surface);color:var(--muted);font:inherit;font-size:11.5px;cursor:pointer;padding:0 2px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.btn{font:inherit;font-size:11.5px;font-weight:600;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:6px;padding:6px 10px;cursor:pointer}
+.btn.small{padding:3px 8px;font-size:10.5px;border-color:var(--line);color:var(--muted)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.note{font-size:10.5px;color:var(--muted);margin:8px 0 0}
+.status{font-size:11px;margin:8px 0 0}
+.status.warn{color:var(--warn)}
+h3{font-size:11.5px;margin:14px 0 0}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;margin:6px 0 0;font-size:11.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-family:var(--num);text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.kv .tot{border-top:1px solid var(--line);padding-top:3px;color:var(--ink);font-weight:700}
+.tablewrap{overflow-x:auto;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{padding:4px 7px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+thead th{color:var(--muted);font-weight:600}
+tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
+[hidden]{display:none!important}
+@media (max-height:540px){#app{overflow-y:auto}}
+@media (min-height:760px){.scale{height:40px}#app{gap:9px;padding-top:12px}.box{padding:9px 10px}.hero{grid-template-columns:108px minmax(0,1fr)}.donut{width:108px;height:108px}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="app">
+  <header class="top"><h1>Take-Home Pay</h1><span class="yr">2027/28 forecast</span><span class="priv">Nothing is saved</span></header>
+
+  <section class="box" aria-label="Your pay">
+    <div class="g2">
+      <div><label for="salary">Annual salary £</label>
+        <div class="stepper"><button type="button" data-step="salary" data-d="-500" aria-label="Decrease salary">−</button>
+        <input id="salary" type="number" inputmode="decimal" step="any" min="0" placeholder="Enter salary">
+        <button type="button" data-step="salary" data-d="500" aria-label="Increase salary">+</button></div></div>
+      <div><label for="region">Tax region</label>
+        <select id="region" class="sel"><option value="eng">England</option><option value="sco">Scotland</option><option value="wal">Wales</option><option value="ni">N. Ireland</option></select></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="eePct" id="eeLbl">Your pension %</label>
+        <div class="stepper"><button type="button" data-step="eePct" data-d="-1" aria-label="Decrease your pension percentage">−</button>
+        <input id="eePct" type="number" inputmode="decimal" step="any" min="0" max="100">
+        <button type="button" data-step="eePct" data-d="1" aria-label="Increase your pension percentage">+</button></div></div>
+      <div><label for="erPct">Employer pension %</label>
+        <div class="stepper"><button type="button" data-step="erPct" data-d="-1" aria-label="Decrease employer pension percentage">−</button>
+        <input id="erPct" type="number" inputmode="decimal" step="any" min="0" max="100">
+        <button type="button" data-step="erPct" data-d="1" aria-label="Increase employer pension percentage">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="netTarget">Monthly target £</label>
+        <div class="stepper"><button type="button" data-step="netTarget" data-d="-50" aria-label="Decrease take-home target">−</button>
+        <input id="netTarget" type="number" inputmode="decimal" step="any" min="0" placeholder="e.g. 2500">
+        <button type="button" data-step="netTarget" data-d="50" aria-label="Increase take-home target">+</button></div></div>
+      <div><span class="lbl">Hit it tax efficiently</span><button type="button" class="opt" id="optBtn" aria-pressed="false">Make tax efficient</button></div>
+    </div>
+    <div class="cap" id="optMsg" style="margin-top:3px"></div>
+  </section>
+
+  <nav class="chips" aria-label="More inputs and detail">
+    <button type="button" class="chip" data-open="shBonus">Bonus<small id="cBonus">add</small></button>
+    <button type="button" class="chip" data-open="shSac">Sacrifice<small id="cSac">C2W etc</small></button>
+    <button type="button" class="chip" data-open="shPost">After tax<small id="cPost">add</small></button>
+    <button type="button" class="chip" data-open="shPen">Pension<small id="cPen">options</small></button>
+    <button type="button" class="chip" data-open="shMore">More<small id="cMore">options</small></button>
+    <button type="button" class="chip" data-open="shDetail">Detail<small>table</small></button>
+  </nav>
+
+  <section class="box hero" aria-label="Where your pay goes">
+    <svg class="donut" id="donut" viewBox="0 0 42 42" role="img" aria-label="Share of gross pay"></svg>
+    <div>
+      <div class="cap">Take-home in <select id="viewMonth" class="msel" aria-label="Month to show"></select></div>
+      <div class="big" id="oNet">—</div>
+      <div class="cap" id="oMonth">Enter your salary to see results</div>
+      <div class="leg" id="legend"></div>
+    </div>
+  </section>
+
+  <section class="box scalebox" aria-label="Tax efficiency scale">
+    <div class="hd"><strong>Tax efficiency scale</strong><span id="scCap"></span></div>
+    <div class="scale" id="scale"></div>
+    <div class="ticks" id="ticks"></div>
+    <div class="cap" id="scMsg">Shows which tax band your income reaches and how far pension and sacrifice pull it back.</div>
+  </section>
+
+  <section class="box" aria-label="Pension">
+    <div class="hd"><strong>Into pension this year</strong><span id="penCap"></span></div>
+    <div class="stack" id="penBar"></div>
+    <div class="pl" id="penLeg"></div>
+  </section>
+
+  <section class="stats" aria-label="Tax efficiency">
+    <div class="stat"><div class="v" id="e1">—</div><div class="t">tax + NI share of gross pay</div></div>
+    <div class="stat"><div class="v" id="e2">—</div><div class="t">saved by pension + sacrifice</div></div>
+    <div class="stat"><div class="v" id="e3">—</div><div class="t">kept from next £100 of salary</div></div>
+    <div class="stat"><div class="v" id="e4">—</div><div class="t">cost of £100 more into pension</div></div>
+  </section>
+
+  <button type="button" class="alert" id="alert" data-open="shDetail" hidden><span id="alertTxt"></span></button>
+</main>
+
+<div class="sheet" id="shBonus" role="dialog" aria-label="Bonus"><header><h2>Bonus</h2><button type="button" class="done">Done</button></header><div class="body">
+  <div class="fg">
+    <div><label for="bonusValue">Bonus</label><input id="bonusValue" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+    <div><span class="lbl" id="btLbl">Entered as</span><div class="seg" role="group" aria-labelledby="btLbl"><button type="button" id="btAmount">£ amount</button><button type="button" id="btPct">% of salary</button></div></div>
+    <div><label for="bonusMonth">Paid in</label><select id="bonusMonth"></select></div>
+    <div><label for="bsType">Bonus into pension</label><select id="bsType"><option value="none">None, all cash</option><option value="pct">A % of the bonus</option><option value="amount">A £ amount</option><option value="target">To leave a set take-home</option></select></div>
+    <div class="full" id="bsValWrap" hidden><label for="bsValue" id="bsValLbl">Amount</label><input id="bsValue" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+  </div>
+  <dl class="kv" id="bonusKv"></dl><p class="note" id="bonusNote"></p><p class="status" id="status"></p>
+</div></div>
+
+<div class="sheet" id="shSac" role="dialog" aria-label="Salary sacrifice"><header><h2>Salary sacrifice</h2><button type="button" class="done">Done</button></header><div class="body">
+  <p class="note" style="margin-top:0">Cycle to Work and other schemes taken from pay before tax and NI. Enter each as a monthly or a yearly amount.</p>
+  <div id="sacList"></div>
+  <div class="row" style="margin-top:10px"><button type="button" class="btn" id="addC2W">Add Cycle to Work</button><button type="button" class="btn" id="addSac">Add other salary sacrifice</button></div>
+</div></div>
+
+<div class="sheet" id="shPost" role="dialog" aria-label="Deductions after tax"><header><h2>Deductions after tax</h2><button type="button" class="done">Done</button></header><div class="body">
+  <p class="note" style="margin-top:0">Savings schemes, share plans, union fees and similar. These reduce take-home but do not change tax or NI.</p>
+  <div id="postList"></div>
+  <div class="row" style="margin-top:10px"><button type="button" class="btn" id="addPost">Add a deduction</button></div>
+</div></div>
+
+<div class="sheet" id="shPen" role="dialog" aria-label="Pension options"><header><h2>Pension options</h2><button type="button" class="done">Done</button></header><div class="body">
+  <div class="fg">
+    <div class="full"><label for="method">How your pension is taken</label><select id="method"><option value="sacrifice">Salary sacrifice (saves tax and NI)</option><option value="netpay">From pay before tax (saves tax only)</option><option value="ras">From pay after tax (provider adds 20%)</option></select></div>
+    <div class="full"><span class="lbl" id="pmLbl">Set your pension by</span><div class="seg" role="group" aria-labelledby="pmLbl"><button type="button" id="pmPct">Pension %</button><button type="button" id="pmTarget">Take-home target</button></div></div>
+  </div>
+  <p class="status" id="pctResult"></p>
+  <p class="note">With a take-home target, the pension % is worked out so each normal month, without the bonus, pays the target on the main screen, after everything else you have entered. The Make tax efficient button also sends the whole bonus to the pension.</p>
+</div></div>
+
+<div class="sheet" id="shMore" role="dialog" aria-label="More options"><header><h2>More options</h2><button type="button" class="done">Done</button></header><div class="body">
+  <div class="fg">
+    <div><label for="risePct">Pay rise in year %</label><input id="risePct" type="number" inputmode="decimal" step="any" placeholder="0"></div>
+    <div><label for="riseFrom">Pay rise starts</label><select id="riseFrom"></select></div>
+    <div><label for="bik">Taxable benefits £/month</label><input id="bik" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></div>
+    <div><label for="allowance">Tax-free allowance £</label><input id="allowance" type="number" inputmode="decimal" step="any" min="0"></div>
+    <div><label for="loan">Student loan</label><select id="loan"><option value="">None</option><option value="p1">Plan 1</option><option value="p2">Plan 2</option><option value="p4">Plan 4</option><option value="p5">Plan 5</option></select></div>
+    <div><label for="pg">Postgraduate loan</label><select id="pg"><option value="0">No</option><option value="1">Yes</option></select></div>
+    <div class="full"><label for="children">Children on Child Benefit</label><input id="children" type="number" inputmode="numeric" step="1" min="0" placeholder="0"></div>
+  </div>
+  <p class="note">Taxable benefits are things like company medical cover taxed through your pay. The standard allowance is £12,570 (tax code 1257L); for another code, use the number in the code times 10. Child Benefit counts if you or your partner claim it.</p>
+  <div class="row" style="margin-top:14px"><span class="note" style="margin:0">Start again with a blank calculator.</span><button type="button" class="btn small" id="reset">Clear everything</button></div>
+</div></div>
+
+<div class="sheet" id="shDetail" role="dialog" aria-label="Detail"><header><h2>Detail</h2><button type="button" class="done">Done</button></header><div class="body">
+  <div id="effNotes"></div>
+  <h3 style="margin-top:4px">Pension over the year</h3><dl class="kv" id="penKv"></dl><p class="note" id="penNote"></p>
+  <h3>Tax efficiency</h3><dl class="kv" id="effKv"></dl>
+  <h3>Month by month</h3><div class="tablewrap"><table id="tbl"></table></div>
+  <h3>Rates used</h3><p class="note" id="ratesNote"></p>
+  <p class="note">UK income tax and NI thresholds are confirmed as unchanged for 2027/28. Scottish bands for 2027/28, Child Benefit and student loan thresholds were not set when this was built, so the 2026/27 figures are used. Tax is worked out month by month on the cumulative basis payroll uses. The allowance is reduced when income is over £100,000. Higher-rate relief on after-tax pension contributions, which you claim from HMRC yourself, is not included. This is an estimate, not financial or tax advice. Nothing you enter is saved or sent anywhere.</p>
+</div></div>
+
+<script>
+
+const MONTHS=["Apr 27","May 27","Jun 27","Jul 27","Aug 27","Sep 27","Oct 27","Nov 27","Dec 27","Jan 28","Feb 28","Mar 28"];
+const BANDS={
+  ruk:[[0,.20],[37700,.40],[125140,.45]],
+  sco:[[0,.19],[3967,.20],[16956,.21],[31092,.42],[62430,.45],[125140,.48]]
+};
+const NI={pt:12570/12,uel:50270/12,main:.08,upper:.02};
+const LOANS={p1:26900,p2:29385,p4:33795,p5:25000,pg:21000};
+const CB={first:27.05,other:17.90};
+const blank=()=>({region:"eng",salary:null,pensionMode:"pct",eePct:5,erPct:3,netTarget:null,method:"sacrifice",
+  bonusType:"amount",bonusValue:null,bonusMonth:12,bsType:"none",bsValue:null,
+  viewMonth:null,risePct:null,riseFrom:1,bik:null,allowance:12570,loan:"",pg:"0",children:null,sac:[],post:[]});
+let S=blank();   // held in memory only: never written to storage
+
+const v=x=>+x||0;
+const gbp=(x,d=0)=>(x<0?"−":"")+"£"+Math.abs(x).toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pc=(x,d=1)=>(x*100).toFixed(d)+"%";
+const bands=s=>s.region==="sco"?BANDS.sco:BANDS.ruk;
+function taxCum(b,x,n){let t=0;for(let i=0;i<b.length;i++){const lo=b[i][0]*n/12,step=b[i][1]-(i?b[i-1][1]:0);if(x>lo)t+=step*(x-lo);}return t;}
+const perMonth=it=>it.basis==="yearly"?v(it.amount)/12:v(it.amount);
+const inRange=(it,n)=>n>=it.from&&n<=it.to;
+const bonusGross=s=>s.bonusType==="pct"?v(s.salary)*v(s.bonusValue)/100:v(s.bonusValue);
+
+function run(s,pct,bs){
+  const bg=bonusGross(s);bs=Math.min(bg,Math.max(0,bs));
+  const rows=[];
+  for(let n=1;n<=12;n++){
+    const basic=v(s.salary)/12*(v(s.risePct)&&n>=s.riseFrom?1+v(s.risePct)/100:1);
+    const pen=basic*pct/100;
+    let sch=0,post=0;
+    for(const it of s.sac)if(inRange(it,n))sch+=perMonth(it);
+    for(const it of s.post)if(inRange(it,n))post+=perMonth(it);
+    const bonus=n===+s.bonusMonth?bg:0,bsac=n===+s.bonusMonth?bs:0;
+    const sacPen=s.method==="sacrifice"?pen:0;
+    const cash=Math.max(0,basic-sacPen-sch+bonus-bsac);           // pay subject to NI
+    const taxable=Math.max(0,cash-(s.method==="netpay"?pen:0))+v(s.bik);
+    const ni=Math.max(0,Math.min(cash,NI.uel)-NI.pt)*NI.main+Math.max(0,cash-NI.uel)*NI.upper;
+    let loan=0;
+    if(s.loan)loan+=Math.floor(Math.max(0,cash-LOANS[s.loan]/12)*.09);
+    if(s.pg==="1")loan+=Math.floor(Math.max(0,cash-LOANS.pg/12)*.06);
+    const rasNet=s.method==="ras"?pen*.8:0;
+    const emp=basic*v(s.erPct)/100;
+    rows.push({n,basic,bonus,pen,sch,bsac,cash,taxable,ni,loan,rasNet,post,emp,netpayPen:s.method==="netpay"?pen:0,sacPen});
+  }
+  const sum=k=>rows.reduce((a,r)=>a+r[k],0);
+  const ani=sum("taxable")-(s.method==="ras"?sum("pen"):0);
+  const allow=Math.max(0,v(s.allowance)-Math.max(0,(ani-100000)/2));
+  const b=bands(s);let ytd=0,prev=0;
+  for(const r of rows){
+    ytd+=r.taxable;
+    const t=taxCum(b,Math.max(0,ytd-allow*r.n/12),r.n);
+    r.tax=t-prev;prev=t;
+    r.net=r.cash-r.netpayPen-r.tax-r.ni-r.loan-r.rasNet-r.post;
+    r.penTotal=r.pen+r.bsac+r.emp;
+  }
+  const kids=Math.max(0,Math.floor(v(s.children)));
+  const cb=kids?(CB.first+CB.other*(kids-1))*52:0;
+  const cbPct=Math.min(1,Math.max(0,Math.floor((ani-60000)/200)/100));
+  return {rows,sum:k=>rows.reduce((a,r)=>a+r[k],0),ani,allow,cb,charge:cb*cbPct,cbPct,bg,bs};
+}
+const netOf=R=>R.sum("net");
+function solveBonus(s,pct){
+  const bg=bonusGross(s);
+  if(!bg||s.bsType==="none")return {bs:0};
+  if(s.bsType==="pct")return {bs:bg*Math.min(100,v(s.bsValue))/100};
+  if(s.bsType==="amount")return {bs:Math.min(bg,v(s.bsValue))};
+  const noBonus=netOf(run(Object.assign({},s,{bonusType:"amount",bonusValue:0}),pct,0));
+  const f=bs=>netOf(run(s,pct,bs))-noBonus;
+  const all=f(0),target=v(s.bsValue);
+  if(target>=all)return {bs:0,msg:`The whole bonus pays ${gbp(all)} after deductions, which is less than your target, so all of it is paid as cash.`,warn:true};
+  let lo=0,hi=bg;for(let k=0;k<45;k++){const mid=(lo+hi)/2;if(f(mid)>target)lo=mid;else hi=mid;}
+  return {bs:hi};
+}
+function typical(s,R){const ms=R.rows.filter(r=>!(R.bg>0&&r.n===+s.bonusMonth));return ms.reduce((a,r)=>a+r.net,0)/ms.length;}
+function solvePct(s){
+  const f=p=>{const b=solveBonus(s,p);return typical(s,run(s,p,b.bs));};
+  const top=f(0),target=v(s.netTarget);
+  if(target>=top)return {pct:0,msg:`The most you can take home is ${gbp(top)} a month, with no pension contribution.`,warn:true};
+  if(target<=f(90))return {pct:90,msg:"That target is below your take-home at a 90% pension contribution.",warn:true};
+  let lo=0,hi=90;for(let k=0;k<40;k++){const mid=(lo+hi)/2;if(f(mid)>target)lo=mid;else hi=mid;}
+  return {pct:lo};
+}
+function compute(s){
+  let pm=null,pct=Math.min(100,Math.max(0,v(s.eePct)));
+  if(s.pensionMode==="target"&&v(s.netTarget)>0){pm=solvePct(s);pct=pm.pct;}
+  const bsol=solveBonus(s,pct),R=run(s,pct,bsol.bs);
+  const net=netOf(R),gross=R.sum("basic")+R.sum("bonus");
+  // what the same pay would cost in tax and NI with no pension or salary sacrifice
+  const plain=run(Object.assign({},s,{sac:[]}),0,0);
+  const saved=(plain.sum("tax")+plain.sum("ni"))-(R.sum("tax")+R.sum("ni"))+(s.method==="ras"?R.sum("pen")*.2:0);
+  // next £100 of salary
+  const fixed=Object.assign({},s,{bonusType:"amount",bonusValue:R.bg});
+  const up=run(Object.assign({},fixed,{salary:v(s.salary)+100}),pct,R.bs);
+  const keep=(netOf(up)-up.charge)-(net-R.charge);
+  // another £100 into the pension
+  let penCost=null;
+  if(v(s.salary)>0&&pct<99){const more=run(s,pct+100/v(s.salary)*100,R.bs);const dPen=more.sum("pen")-R.sum("pen");
+    if(dPen>0)penCost=((net-R.charge)-(netOf(more)-more.charge))/dPen*100;}
+  return {R,pct,pm,bsol,net,gross,saved,keep,penCost,plainAni:plain.ani,typical:typical(s,R),
+    bonusNet:R.bg?net-netOf(run(Object.assign({},s,{bonusType:"amount",bonusValue:0}),pct,0)):0};
+}
+
+/* ---------- interface ---------- */
+const $=id=>document.getElementById(id);
+const NUM=["salary","eePct","erPct","netTarget","bonusValue","bsValue","risePct","bik","allowance","children"];
+const SEL=["region","method","bonusMonth","bsType","riseFrom","loan","pg"];
+const monthOpts=(sel,val)=>{sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}"${i+1==val?" selected":""}>${m}</option>`).join("");};
+const setSeg=(a,b,on)=>{$(a).setAttribute("aria-pressed",on);$(b).setAttribute("aria-pressed",!on);};
+const short=x=>x>=99950?Math.round(x/1000)+"k":x>=1000?(x/1000).toFixed(1)+"k":Math.round(x)+"";
+function syncForm(){
+  NUM.forEach(id=>{$(id).value=S[id]==null?"":S[id];});
+  monthOpts($("bonusMonth"),S.bonusMonth);monthOpts($("riseFrom"),S.riseFrom);monthOpts($("viewMonth"),1);
+  ["region","method","bsType","loan","pg"].forEach(id=>{$(id).value=S[id];});
+  setSeg("pmPct","pmTarget",S.pensionMode==="pct");
+  setSeg("btAmount","btPct",S.bonusType==="amount");
+  renderList("sac");renderList("post");update();
+}
+function bind(){
+  NUM.forEach(id=>$(id).addEventListener("input",()=>{const x=parseFloat($(id).value);S[id]=isNaN(x)?null:x;update();}));
+  SEL.forEach(id=>$(id).addEventListener("change",()=>{const x=$(id).value;S[id]=(id==="bonusMonth"||id==="riseFrom")?+x:x;update();}));
+  document.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.step;
+    S[id]=Math.max(0,Math.round((v(S[id])+ +b.dataset.d)*100)/100);$(id).value=S[id];update();}));
+  document.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>{$(b.dataset.open).classList.add("open");}));
+  document.querySelectorAll(".sheet .done").forEach(b=>b.addEventListener("click",()=>b.closest(".sheet").classList.remove("open")));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".sheet.open").forEach(s=>s.classList.remove("open"));});
+  $("pmPct").addEventListener("click",()=>{S.pensionMode="pct";syncForm();});
+  $("pmTarget").addEventListener("click",()=>{S.pensionMode="target";syncForm();});
+  $("btAmount").addEventListener("click",()=>{S.bonusType="amount";syncForm();});
+  $("btPct").addEventListener("click",()=>{S.bonusType="pct";syncForm();});
+  $("addC2W").addEventListener("click",()=>{S.sac.push({name:"Cycle to Work",amount:null,basis:"yearly",from:1,to:12});renderList("sac");update();});
+  $("addSac").addEventListener("click",()=>{S.sac.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("sac");update();});
+  $("addPost").addEventListener("click",()=>{S.post.push({name:"",amount:null,basis:"monthly",from:1,to:12});renderList("post");update();});
+  $("reset").addEventListener("click",()=>{S=blank();syncForm();});
+  $("viewMonth").addEventListener("change",e=>{S.viewMonth=+e.target.value;update();});
+  $("optBtn").addEventListener("click",()=>{
+    if(S.pensionMode==="target"){if(v(S.salary)>0&&v(S.netTarget)>0)S.eePct=Math.round(compute(S).pct*10)/10;S.pensionMode="pct";syncForm();return;}
+    if(!(v(S.netTarget)>0)){$("optMsg").textContent="Enter the monthly take-home you want first, then tap the button.";$("netTarget").focus();return;}
+    S.pensionMode="target";if(bonusGross(S)>0){S.bsType="pct";S.bsValue=100;}syncForm();
+  });
+}
+function renderList(key){
+  const box=$(key+"List");box.innerHTML="";
+  const ph=key==="sac"?"e.g. Holiday purchase, car scheme":"e.g. Savings scheme";
+  S[key].forEach((it,i)=>{
+    const p=key+i,d=document.createElement("div");d.className="item fg";
+    d.innerHTML=`
+      <div class="full"><label for="${p}n">Name</label><input id="${p}n" type="text" placeholder="${ph}"></div>
+      <div><label for="${p}a">Amount £</label><input id="${p}a" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="${it.amount==null?"":it.amount}"></div>
+      <div><span class="lbl" id="${p}bl">Amount is</span><div class="seg" role="group" aria-labelledby="${p}bl">
+        <button type="button" id="${p}m" aria-pressed="${it.basis==="monthly"}">Monthly</button><button type="button" id="${p}y" aria-pressed="${it.basis==="yearly"}">Yearly</button></div></div>
+      <div><label for="${p}f">From</label><select id="${p}f"></select></div>
+      <div><label for="${p}t">To</label><select id="${p}t"></select></div>
+      <div class="row full"><span class="note" style="margin:0" id="${p}e"></span><button type="button" class="btn small" id="${p}r">Remove</button></div>`;
+    box.appendChild(d);
+    $(p+"n").value=it.name;monthOpts($(p+"f"),it.from);monthOpts($(p+"t"),it.to);
+    $(p+"n").addEventListener("input",e=>{it.name=e.target.value;});
+    $(p+"a").addEventListener("input",e=>{const x=parseFloat(e.target.value);it.amount=isNaN(x)?null:x;update();});
+    $(p+"m").addEventListener("click",()=>{it.basis="monthly";renderList(key);update();});
+    $(p+"y").addEventListener("click",()=>{it.basis="yearly";renderList(key);update();});
+    $(p+"f").addEventListener("change",e=>{it.from=+e.target.value;update();});
+    $(p+"t").addEventListener("change",e=>{it.to=+e.target.value;update();});
+    $(p+"r").addEventListener("click",()=>{S[key].splice(i,1);renderList(key);update();});
+  });
+}
+const kv=rows=>rows.filter(Boolean).map(([k,val,tot])=>`<dt class="${tot?"tot":""}">${k}</dt><dd class="${tot?"tot":""}">${val}</dd>`).join("");
+function chip(id,text,on){const el=$(id);el.textContent=text;el.parentElement.classList.toggle("on",!!on);}
+function donut(parts,centre,sub){
+  let off=25,h='<circle class="bgc" cx="21" cy="21" r="15.915"/>';
+  for(const p of parts){h+=`<circle class="s-${p.k}" cx="21" cy="21" r="15.915" stroke-dasharray="${Math.max(0,p.share*100-.6)} ${100-Math.max(0,p.share*100-.6)}" stroke-dashoffset="${off}"/>`;off-=p.share*100;}
+  h+=`<text x="21" y="21.5" text-anchor="middle" font-size="7.2">${centre}</text><text class="dsub" x="21" y="26.5" text-anchor="middle" font-size="3.4">${sub}</text>`;
+  $("donut").innerHTML=h;
+}
+function annualTax(inc){const A=Math.max(0,v(S.allowance)-Math.max(0,(inc-100000)/2));return taxCum(bands(S),Math.max(0,inc-A),12);}
+function drawScale(C){
+  const A=v(S.allowance),now=C?C.R.ani:0,was=C?C.plainAni:0;
+  const max=Math.max(60000,Math.ceil(Math.max(now,was)*1.18/10000)*10000);
+  let pts=[0,max,A,100000,100000+2*A];for(const b of bands(S)){pts.push(A+b[0]);pts.push(b[0]);}
+  pts=[...new Set(pts.filter(p=>p>=0&&p<=max).map(p=>Math.round(p)))].sort((a,b)=>a-b);
+  const zones=[];
+  for(let i=0;i<pts.length-1;i++){const mid=(pts[i]+pts[i+1])/2,r=Math.round((annualTax(mid+1)-annualTax(mid))*1000)/1000;
+    const last=zones[zones.length-1];if(last&&Math.abs(last.r-r)<.002)last.hi=pts[i+1];else zones.push({lo:pts[i],hi:pts[i+1],r});}
+  let h=zones.map(z=>{const w=(z.hi-z.lo)/max*100;return `<div class="zone${z.r<.001?" free":""}" style="width:${w}%;--o:${Math.min(.95,.12+z.r*1.25)}" title="${gbp(z.lo)} to ${gbp(z.hi)}: ${Math.round(z.r*100)}% income tax">${w>8?`<span>${Math.round(z.r*1000)/10}%</span>`:""}</div>`;}).join("");
+  if(C){if(Math.abs(was-now)>50)h+=`<div class="mk was" style="left:${Math.min(100,was/max*100)}%"></div>`;h+=`<div class="mk" style="left:${Math.min(100,now/max*100)}%"></div>`;}
+  $("scale").innerHTML=h;
+  let lastPos=-99,t="";
+  for(const p of [...zones.map(z=>z.lo).slice(1),max]){const pos=p/max*100;if(pos-lastPos<11||pos>97&&p!==max)continue;lastPos=pos;
+    t+=`<span style="left:${Math.min(96,pos)}%">£${p%1000?(p/1000).toFixed(1):p/1000}k</span>`;}
+  $("ticks").innerHTML=t;
+  if(!C){$("scMsg").textContent="Shows which tax band your income reaches and how far pension and sacrifice pull it back.";return;}
+  const z=zones.find(z=>now>z.lo&&now<=z.hi)||zones[0],zw=zones.find(z=>was>z.lo&&was<=z.hi)||zones[0];
+  $("scCap").textContent=Math.abs(was-now)>50?`taxed on ${gbp(now)}, down from ${gbp(was)}`:`taxed on ${gbp(now)}`;
+  const rate=x=>Math.round(x*1000)/10+"%";let m=`Your top slice of pay is taxed at ${rate(z.r)}`;
+  if(zw.r>z.r+.002)m+=`, down from ${rate(zw.r)} with no pension or sacrifice`;
+  m+=".";
+  const idx=zones.indexOf(z);
+  if(idx>0&&z.r>.001){const below=zones[idx-1];m+=` ${gbp(now-z.lo)} more into pension reaches the ${rate(below.r)} band.`;}
+  $("scMsg").textContent=m;
+}
+function update(){
+  const has=v(S.salary)>0,target=S.pensionMode==="target";
+  const vm=S.viewMonth||(bonusGross(S)>0?+S.bonusMonth:1);$("viewMonth").value=vm;
+  $("bsValWrap").hidden=S.bsType==="none";
+  $("bsValLbl").textContent=S.bsType==="pct"?"% of the bonus into pension":S.bsType==="amount"?"£ of the bonus into pension":"Bonus take-home you want £";
+  for(const key of ["sac","post"])S[key].forEach((it,i)=>{const el=$(key+i+"e");if(!el)return;const m=Math.max(0,it.to-it.from+1);
+    el.textContent=`${gbp(perMonth(it),2)} a month for ${m} month${m===1?"":"s"}: ${gbp(perMonth(it)*m,2)} in the year`;});
+  const sacTot=S.sac.reduce((a,it)=>a+perMonth(it)*Math.max(0,it.to-it.from+1),0),postTot=S.post.reduce((a,it)=>a+perMonth(it)*Math.max(0,it.to-it.from+1),0);
+  chip("cBonus",bonusGross(S)?gbp(bonusGross(S)):"add",bonusGross(S));
+  chip("cSac",sacTot?gbp(sacTot)+"/yr":"C2W etc",sacTot);
+  chip("cPost",postTot?gbp(postTot)+"/yr":"add",postTot);
+  chip("cPen",target?"by target":({sacrifice:"sacrifice",netpay:"before tax",ras:"after tax"})[S.method],target||S.method!=="sacrifice");
+  const extras=[v(S.risePct)?1:0,v(S.bik)?1:0,S.loan?1:0,S.pg==="1"?1:0,v(S.children)?1:0,v(S.allowance)!==12570?1:0].reduce((a,b)=>a+b,0);
+  chip("cMore",extras?extras+" set":"options",extras);
+  $("optBtn").setAttribute("aria-pressed",target);$("optBtn").textContent=target?"On · tap to turn off":"Make tax efficient";
+  if(!target||!has)$("optMsg").textContent=target?"Enter your salary.":"Set a target, then tap the button.";
+  $("eeLbl").textContent=target?"Your pension % (solved)":"Your pension %";
+  $("eePct").disabled=target;document.querySelectorAll('[data-step="eePct"]').forEach(b=>b.disabled=target);
+  if(!target&&document.activeElement!==$("eePct"))$("eePct").value=S.eePct==null?"":S.eePct;
+  $("ratesNote").textContent=(S.region==="sco"
+    ?"Scotland: 19% on £12,571 to £16,537, 20% to £29,526, 21% to £43,662, 42% to £75,000, 45% to £125,140, 48% above."
+    :"England, Wales and Northern Ireland: 20% on £12,571 to £50,270, 40% to £125,140, 45% above.")
+    +" National Insurance: 8% on £12,570 to £50,270 a year, 2% above. Student loans: 9% above £26,900 (Plan 1), £29,385 (Plan 2), £33,795 (Plan 4), £25,000 (Plan 5); postgraduate 6% above £21,000. Child Benefit: £27.05 a week for the first child, £17.90 for each other child; the charge is 1% for each £200 of income over £60,000.";
+  if(!has){
+    $("oNet").textContent="—";$("oMonth").textContent="Enter your salary to see results";
+    donut([],"—","of pay kept");$("legend").innerHTML="";$("penCap").textContent="";$("scCap").textContent="";
+    drawScale(null);
+    $("penBar").innerHTML="";$("penLeg").innerHTML="";["e1","e2","e3","e4"].forEach(id=>$(id).textContent="—");
+    $("alert").hidden=true;if(target)$("eePct").value="";
+    ["pctResult","status","penNote","bonusNote"].forEach(id=>$(id).textContent="");$("bonusKv").innerHTML="";
+    $("tbl").innerHTML="";$("effNotes").innerHTML="";$("penKv").innerHTML="";$("effKv").innerHTML="";
+    return;
+  }
+  const C=compute(S),R=C.R,sum=R.sum;
+  const tax=sum("tax"),ni=sum("ni"),loan=sum("loan"),post=sum("post");
+  const eePen=sum("pen"),bsac=sum("bsac"),emp=sum("emp"),sch=sum("sch");
+  if(target)$("eePct").value=C.pm?C.pct.toFixed(1):"";
+  const pr=$("pctResult");
+  if(target){
+    if(!C.pm){pr.textContent="Enter the monthly take-home you want.";pr.className="status";}
+    else{pr.textContent=C.pm.msg||`Pension needed: ${C.pct.toFixed(1)}% of salary, about ${gbp(eePen/12)} a month.`;pr.className="status"+(C.pm.warn?" warn":"");}
+    $("optMsg").textContent=!C.pm?"Enter the monthly take-home you want.":C.pm.msg||`Pension ${C.pct.toFixed(1)}%${R.bg>0&&R.bs>=R.bg-.5?" plus the whole bonus":""}: ${gbp(eePen+bsac+emp)} into pension, ${gbp(C.saved)} tax and NI saved.`;
+  }else pr.textContent="";
+  const mr=R.rows[vm-1],isB=R.bg>0&&vm===+S.bonusMonth;
+  $("oNet").textContent=gbp(mr.net,2);
+  $("oMonth").textContent=(isB?`includes ${gbp(C.bonusNet)} from the ${gbp(R.bg)} bonus · `:"")+`year ${gbp(C.net)}`;
+  const yourPen=eePen+bsac,other=sch+loan+post;
+  const parts=[["net","Take-home",mr.net],["tax","Income tax",mr.tax],["ni","National Insurance",mr.ni],["pen","Your pension",mr.sacPen+mr.netpayPen+mr.rasNet+mr.bsac],["oth","Other deductions",mr.sch+mr.loan+mr.post]]
+    .filter(p=>p[2]>0.5).map(([k,t,a])=>({k,t,a}));
+  const tot=parts.reduce((a,p)=>a+p.a,0)||1;parts.forEach(p=>p.share=p.a/tot);
+  donut(parts,Math.round(Math.max(0,mr.net)/tot*100)+"%","of pay kept");
+  $("legend").innerHTML=parts.map(p=>`<i class="b-${p.k}"></i><span>${p.t}</span><b>${gbp(p.a)}</b><em>${pc(p.share,0)}</em>`).join("");
+  drawScale(C);
+  const sal=v(S.salary),penAll=yourPen+emp;
+  $("penCap").textContent=`${gbp(penAll)} · ${pc(penAll/sal)} of salary`;
+  const pp=[["pen",`You ${C.pct.toFixed(1)}%`,eePen],["bon","Bonus",bsac],["emp",`Employer ${v(S.erPct).toFixed(1)}%`,emp]].filter(p=>p[2]>0.5);
+  $("penBar").innerHTML=pp.map(p=>`<span class="b-${p[0]}" style="width:${p[2]/penAll*100}%"></span>`).join("");
+  $("penLeg").innerHTML=pp.length?pp.map(p=>`<span><i class="b-${p[0]}"></i>${p[1]} <b>${gbp(p[2])}</b></span>`).join(""):"<span>No pension contributions entered</span>";
+  $("e1").textContent=pc((tax+ni)/C.gross);$("e2").textContent=gbp(C.saved);
+  $("e3").textContent=gbp(C.keep,0);$("e4").textContent=C.penCost!=null?gbp(C.penCost,0):"—";
+  const st=$("status");st.textContent=C.bsol.msg||"";st.className="status"+(C.bsol.warn?" warn":"");
+  $("bonusKv").innerHTML=R.bg?kv([["Bonus before deductions",gbp(R.bg,2)],R.bs?["Into pension",gbp(R.bs,2)]:null,["Tax, NI and other deductions on it",gbp(R.bg-R.bs-C.bonusNet,2)],["Bonus take-home",gbp(C.bonusNet,2),1],["Share of the bonus kept",pc(C.bonusNet/R.bg)]]):"";
+  $("bonusNote").textContent=R.bg?"Take-home is the extra pay over the year compared with having no bonus. The bonus month payslip is on the main screen.":"Enter a bonus as an amount or as a % of salary to see what it pays after deductions.";
+  $("penKv").innerHTML=kv([
+    [`Your contributions from salary (${C.pct.toFixed(1)}%)`,gbp(eePen)],
+    bsac?["From your bonus",gbp(bsac)]:null,
+    [`Employer contributions (${v(S.erPct).toFixed(1)}%)`,gbp(emp)],
+    ["Total into pension",gbp(penAll),1],["Total as a share of salary",pc(penAll/sal)],["Average a month",gbp(penAll/12)]]);
+  $("penNote").textContent=(S.method==="ras"?`Your contributions include ${gbp(eePen*.2)} of basic-rate tax relief added by the pension provider; ${gbp(eePen*.8)} comes out of your take-home. `:"")
+    +(penAll>60000?"This is over the £60,000 pension annual allowance, so a tax charge may apply. ":"")+"Percentages are of basic salary.";
+  $("effKv").innerHTML=kv([
+    ["Income tax",gbp(tax)],["National Insurance",gbp(ni)],loan?["Student loan",gbp(loan)]:null,
+    ["Tax and NI as a share of gross pay",pc((tax+ni)/C.gross)],
+    ["Tax and NI saved by pension and salary sacrifice",gbp(C.saved)],
+    ["Kept from the next £100 of salary",gbp(C.keep,2)],
+    C.penCost!=null?["Take-home cost of £100 more into pension",gbp(C.penCost,2)]:null,
+    ["Income counted for tax thresholds",gbp(R.ani)],
+    R.cb?["Child Benefit for the year",gbp(R.cb)]:null,R.cb?["Child Benefit charge to repay",gbp(R.charge)]:null]);
+  const notes=[];
+  if(C.pm&&C.pm.warn)notes.push(["warn",C.pm.msg]);
+  if(C.bsol.warn)notes.push(["warn",C.bsol.msg]);
+  if(R.ani>100000)notes.push(["warn",`Income is over £100,000, so the tax-free allowance is cut to ${gbp(R.allow)}. Between £100,000 and £125,140 each extra £1 is taxed very heavily; ${gbp(R.ani-100000)} more into pension would restore the full allowance.`]);
+  if(R.cb&&R.charge>0)notes.push(["warn",`Income is over £60,000, so ${Math.round(R.cbPct*100)}% of Child Benefit (${gbp(R.charge)}) is repaid. ${gbp(R.ani-60000)} more into pension or salary sacrifice would clear the charge.`]);
+  if(R.rows.some(r=>r.cash<=0&&r.basic>0))notes.push(["warn","In at least one month the deductions use up all of your pay. Check the amounts entered."]);
+  if(S.method!=="sacrifice"&&eePen>0)notes.push(["ok","Your pension is not taken by salary sacrifice, so you pay NI on that money. Salary sacrifice, where offered, usually leaves more take-home."]);
+  if(R.cb&&R.charge===0)notes.push(["ok","Income is at or under £60,000, so no Child Benefit is repaid."]);
+  $("effNotes").innerHTML=notes.map(([k,t])=>`<p class="status${k==="warn"?" warn":""}" style="margin-top:0;margin-bottom:6px">${t}</p>`).join("");
+  const al=$("alert");al.hidden=!notes.length;
+  if(notes.length){$("alertTxt").textContent=notes[0][1]+(notes.length>1?` (+${notes.length-1} more in Detail)`:"");al.className="alert"+(notes[0][0]==="warn"?" warn":"");}
+  const LINES=[["basic","Basic pay"],R.bg?["bonus","Bonus"]:null,
+    S.method==="sacrifice"?["sacPen","less Pension (salary sacrifice)"]:null,
+    sch?["sch","less Salary sacrifice schemes"]:null,bsac?["bsac","less Bonus into pension"]:null,
+    ["cash","Pay after salary sacrifice","key"],
+    S.method==="netpay"?["netpayPen","less Pension (before tax)"]:null,
+    ["tax","less Income tax"],["ni","less National Insurance"],loan?["loan","less Student loan"]:null,
+    S.method==="ras"?["rasNet","less Pension (after tax)"]:null,post?["post","less Deductions after tax"]:null,
+    ["net","Take-home pay","key"],["emp","Employer pension"],["penTotal","Total into pension"]].filter(Boolean);
+  let h="<thead><tr><th>Line</th>"+MONTHS.map(m=>`<th>${m}</th>`).join("")+"<th>Total</th></tr></thead><tbody>";
+  for(const [k,label,kind] of LINES){h+=`<tr class="${kind||""}"><td>${label}</td>`+R.rows.map(r=>`<td>${gbp(r[k],2)}</td>`).join("")+`<td class="tot">${gbp(sum(k),2)}</td></tr>`;}
+  $("tbl").innerHTML=h+"</tbody>";
+}
+if(typeof document!=="undefined"&&document.getElementById("tbl")){/*TEST*/bind();syncForm();}
+</script>
+</body>
+</html>
