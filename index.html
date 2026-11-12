@@ -166,6 +166,10 @@ button.ddrow{cursor:pointer}
 .seg.main button{font-size:1rem;font-weight:600;color:var(--accent)}
 /* figures carried from another calculator have a dashed box */
 .stepper.carried{border-style:dashed}
+/* once a carried figure has been changed, a button in its box puts the carried figure back */
+.stepper .rst{flex:0 0 1.5rem;background:transparent;font-size:1.25rem;font-weight:600}
+.stepper.over button:not(.rst){flex-basis:1.9rem}   /* the − and + narrow a little so a long figure still fits beside the reset button */
+.stepper.over input{letter-spacing:-.03em}
 .sel.carried{border:1.5px dashed var(--accent)}
 .lk{margin-top:.35rem}
 .readout{display:flex;align-items:center;justify-content:center;height:2.6rem;border:1px solid var(--line);border-radius:.55rem;font-family:var(--num);font-size:var(--field);font-weight:600;color:var(--muted)}
@@ -1165,6 +1169,11 @@ function bind(){
   chartPick("pBars",()=>POT?POT.rows.length:0,(i,d)=>{S.ppView=Math.min(POT.end,Math.max(POT.age,i!=null?POT.age+i:(S.ppView==null?POT.dd:S.ppView)+d));paintPot();save();});
   chartPick("cBars",()=>CI?CI.rows.length:0,(i,d)=>{S.ciView=Math.min(CI.years,Math.max(0,i!=null?i:(S.ciView==null?CI.years:S.ciView)+d));paintCi();save();});
   Object.keys(CARRY).concat("ppDdAge","lsAge").forEach(id=>$(id).addEventListener("blur",()=>update()));
+  for(const id in CARRY){   // each carried field gets a reset button inside its box, shown only after the figure is changed
+    const b=document.createElement("button");b.type="button";b.className="rst";b.hidden=true;b.textContent="↺";
+    b.title=b.ariaLabel=`Reset to the figure from ${CARRY[id].from}`;
+    b.addEventListener("click",()=>{S[id]=null;update();});$(id).after(b);
+  }
   for(const id in CARRYSEL)$(id).addEventListener("change",e=>{S[id]=e.target.value===CARRYSEL[id].get()?null:e.target.value;update();});
   document.querySelectorAll("[data-set]").forEach(b=>b.addEventListener("click",()=>{const [k,val]=b.dataset.set.split(":");S[k]=val;update();}));
   document.querySelectorAll("[data-chk]").forEach(c=>c.addEventListener("change",()=>{S[c.dataset.chk]=c.checked;update();}));
@@ -1320,11 +1329,14 @@ function paintCarry(){
     const el=$(id),val=S[id]==null?CARRY[id].get():null;
     if(S[id]==null&&document.activeElement!==el)el.value=val==null?"":val.toLocaleString("en-GB",{maximumFractionDigits:2,useGrouping:MONEY.includes(id)});
     mark(el,val!=null,CARRY[id].from);
+    // changed by the user while there is a figure to carry: show the button that puts it back
+    const over=S[id]!=null&&CARRY[id].get()!=null,rst=el.parentElement.querySelector(".rst");
+    rst.hidden=!over;el.parentElement.classList.toggle("over",over);
   }
   for(const id in CARRYSEL){$(id).value=effSel(id);mark($(id),S[id]==null,CARRYSEL[id].from);}
   document.querySelectorAll(".lk").forEach(l=>{
     const src=by.get(l.closest(".screen"));l.hidden=!src;
-    if(src)l.textContent=`Dashed boxes are carried from ${[...src].join(" and ")}. Change one and it changes here only.`;
+    if(src)l.textContent=`Dashed boxes are carried from ${[...src].join(" and ")}. Change one and it changes here only; ↺ puts it back.`;
   });
 }
 

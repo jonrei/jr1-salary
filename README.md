@@ -45,7 +45,7 @@ The whole state (`S`) is saved to `localStorage` under the key `jr1-money` after
 
 ## Figures carried between calculators
 
-A field can show a figure from another calculator until the user types their own. It has a dashed box while it is carried, and a line under the inputs says where it came from. Typing changes it in that calculator only and never alters the source. Emptying the field links it again.
+A field can show a figure from another calculator until the user types their own. It has a dashed box while it is carried, and a line under the inputs says where it came from. Typing changes it in that calculator only and never alters the source. Once changed, a ↺ button inside the box puts the carried figure back; emptying the field does the same.
 
 | Field | Carried from |
 |---|---|

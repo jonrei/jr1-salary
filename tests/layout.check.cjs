@@ -63,6 +63,9 @@ const STATES = {
     if ((await p.inputValue("#salary")) !== "118,000") throw new Error("changing a carried figure altered its source");
     await p.click("#back"); await go(p, "compare"); await p.fill("#cmpA", ""); await p.click("#cmpTbl");
     if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("emptying a carried field did not link it again");
+    await p.fill("#cmpA", "1250000"); await p.click("#cmpTbl"); await p.click("#scCmp .stepper.over .rst");
+    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("the reset button did not put the carried figure back");
+    await p.fill("#cmpA", "1250000"); await p.click("#cmpTbl");   // leave it changed, so the screen is checked with the reset button showing
   },
   // figures on the front page, and still there after the page is loaded again
   homeFull: async (p) => {
