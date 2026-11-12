@@ -1,6 +1,6 @@
 // Opens the app in a real browser at common phone sizes and checks the rules it is built on:
-// the main screen fits with no scrolling in either direction, the page makes no requests
-// outside the site, and nothing is written to browser storage.
+// every screen fits with no scrolling in either direction, the page makes no requests outside
+// the site, and the only thing kept in the browser is the one "jr1-money" key.
 // Run with: npm run check:layout   (needs Playwright: npx playwright install chromium)
 // Set SHOTS=some/folder to also save a screenshot of each size.
 const http = require("node:http");
@@ -12,24 +12,69 @@ const ROOT = path.join(__dirname, "..");
 const TYPES = { ".html": "text/html", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png", ".js": "text/javascript", ".webmanifest": "application/manifest+json" };
 const SIZES = [[320, 568], [360, 560], [360, 640], [360, 700], [375, 667], [390, 664], [412, 780], [430, 800], [480, 900]];
 
-// States to check: empty, a plain salary, the fullest Take-home screen (every legend row, a warning and a solved target),
-// and the Pension pot screen empty and with everything filled in.
+// States to check: the front page; the Take-home calculator empty, with a plain salary and at its fullest
+// (every legend row, a warning and a solved target); the Pension pot calculator empty and at its fullest
+// (a lump sum, a drawdown rate of the user's own, a late State Pension); and every other calculator filled in.
+const go = async (p, name) => { await p.click(`[data-go="${name}"]`); };
+const salary = async (p) => { await go(p, "take-home"); await p.fill("#salary", "118000"); await p.click("#back"); };
 const STATES = {
-  empty: async () => {},
-  simple: async (p) => { await p.fill("#salary", "42000"); },
+  home: async () => {},
+  empty: async (p) => { await go(p, "take-home"); },
+  simple: async (p) => { await go(p, "take-home"); await p.fill("#salary", "42000"); },
   full: async (p) => {
-    await p.fill("#salary", "118000");
+    await go(p, "take-home"); await p.fill("#salary", "118000");
     await p.click('[data-open="shBonus"]'); await p.fill("#bonusValue", "9000"); await p.click("#shBonus .done");
     await p.click('[data-open="shSac"]'); await p.click("#addC2W"); await p.fill("#sac0a", "1200"); await p.click("#shSac .done");
     await p.click('[data-open="shPost"]'); await p.click("#addPost"); await p.fill("#post0a", "150"); await p.click("#shPost .done");
     await p.click('[data-open="shMore"]'); await p.selectOption("#loan", "p2"); await p.fill("#children", "2"); await p.click("#shMore .done");
     await p.fill("#netTarget", "5100"); await p.click("#optBtn");
   },
-  potEmpty: async (p) => { await p.click("#tabPot"); },
+  potEmpty: async (p) => { await go(p, "pension"); },
   potFull: async (p) => {
-    await p.fill("#salary", "118000"); await p.click("#tabPot");
+    await go(p, "take-home"); await p.fill("#salary", "118000"); await p.click("#back"); await go(p, "pension");
     await p.fill("#ppAge", "24"); await p.fill("#ppRetire", "60"); await p.fill("#ppPot", "1250000"); await p.fill("#ppMonthly", "2500");
+    await p.fill("#ppDraw", "4.5"); await p.fill("#ppDdAge", "62"); await p.click("#ppAge");
+    await p.click('[data-open="shLump"]'); await p.click("#lsMax"); await p.click("#shLump .done");
     await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
+  },
+  ciEmpty: async (p) => { await go(p, "compound"); },
+  ciFull: async (p) => {
+    await go(p, "compound"); await p.fill("#ciStart", "1250000"); await p.fill("#ciPay", "2500"); await p.click("#ciWeekly");
+    await p.fill("#ciYears", "40"); await p.fill("#ciRise", "3");
+    await p.click('[data-open="shCiOpt"]'); await p.fill("#ciInfl", "2.5"); await p.selectOption("#ciComp", "daily"); await p.click("#shCiOpt .done");
+  },
+  // the other calculators, each filled in with large figures; a salary is entered first so carried figures show too
+  compare: async (p) => { await salary(p); await go(p, "compare"); await p.fill("#cmpB", "1250000"); },
+  convert: async (p) => { await salary(p); await go(p, "convert"); await p.selectOption("#cvPer", "hour"); },
+  budget: async (p) => { await salary(p); await go(p, "budget"); },
+  goal: async (p) => { await go(p, "goal"); await p.fill("#sgTarget", "1250000"); await p.fill("#sgStart", "250000"); await p.fill("#sgRate", "4.5"); await p.fill("#sgYears", "30"); },
+  mortgage: async (p) => { await go(p, "mortgage"); await p.fill("#mgPrice", "1250000"); await p.fill("#mgDeposit", "250000"); await p.fill("#mgOver", "1500"); },
+  stampDuty: async (p) => { await go(p, "mortgage"); await p.fill("#mgPrice", "2250000"); await p.click("#mgSd"); await p.click('[data-set="sdBuyer:extra"]'); },
+  loan: async (p) => { await go(p, "loan"); await p.fill("#lnAmount", "125000"); await p.fill("#lnYears", "7"); },
+  debt: async (p) => { await go(p, "debt"); await p.fill("#dbBalance", "125000"); await p.fill("#dbPay", "2500"); await p.fill("#dbExtra", "500"); },
+  selfEmployed: async (p) => { await salary(p); await go(p, "self-employed"); await p.click('[data-set="dvMode:director"]'); await p.fill("#dvDivs", "250000"); },
+  capitalGains: async (p) => { await salary(p); await go(p, "capital-gains"); await p.fill("#cgSold", "1250000"); await p.fill("#cgPaid", "250000"); await p.fill("#cgCosts", "12500"); },
+  inheritance: async (p) => { await go(p, "inheritance"); await p.fill("#ihEstate", "2250000"); await p.fill("#ihHome", "850000"); await p.click('[data-chk="ihSpouse"]'); },
+  // a figure carries to another calculator, can be changed there, and the change never reaches its source
+  linking: async (p) => {
+    await salary(p); await go(p, "compare");
+    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("the salary did not carry over to Compare salaries");
+    await p.fill("#cmpA", "90000"); await p.fill("#cmpB", "95000"); await p.click("#back"); await go(p, "take-home");
+    if ((await p.inputValue("#salary")) !== "118,000") throw new Error("changing a carried figure altered its source");
+    await p.click("#back"); await go(p, "compare"); await p.fill("#cmpA", ""); await p.click("#cmpTbl");
+    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("emptying a carried field did not link it again");
+    await p.fill("#cmpA", "1250000"); await p.click("#cmpTbl"); await p.click("#scCmp .stepper.over .rst");
+    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("the reset button did not put the carried figure back");
+    await p.fill("#cmpA", "1250000"); await p.click("#cmpTbl");   // leave it changed, so the screen is checked with the reset button showing
+  },
+  // figures on the front page, and still there after the page is loaded again
+  homeFull: async (p) => {
+    await go(p, "take-home"); await p.fill("#salary", "1180000"); await p.click("#back");
+    await go(p, "pension"); await p.fill("#ppAge", "40"); await p.fill("#ppPot", "2500000"); await p.click("#back");
+    await go(p, "compound"); await p.fill("#ciStart", "1250000"); await p.click("#back");
+    await go(p, "mortgage"); await p.fill("#mgPrice", "1250000"); await p.click("#back");
+    await p.reload();
+    if (!(await p.textContent("#h-pay")).includes("£")) throw new Error("figures were not kept after a reload");
   },
 };
 
@@ -59,16 +104,16 @@ const STATES = {
       const scr = app.querySelector(".screen:not([hidden])"), kids = [...scr.children].filter((e) => e.offsetHeight > 0);
       const spare = scr.clientHeight - kids.reduce((t, e) => t + e.offsetHeight, 0) - parseFloat(getComputedStyle(scr).rowGap) * (kids.length - 1);
       return { spare: Math.round(spare), over: app.scrollHeight - app.clientHeight, side: document.documentElement.scrollWidth - innerWidth, wide,
-        stored: localStorage.length + sessionStorage.length + document.cookie.length, rem: parseFloat(getComputedStyle(document.documentElement).fontSize) };
+        stored: Object.keys(localStorage).filter((k) => k !== "jr1-money").length + sessionStorage.length + document.cookie.length, rem: parseFloat(getComputedStyle(document.documentElement).fontSize) };
     });
     if (m.over > 0) problems.push(`${tag}: main screen is ${m.over}px too tall, so it scrolls`);
     if (m.side > 0 || m.wide.length) problems.push(`${tag}: content runs off the side (${m.wide.join(", ") || m.side + "px"})`);
-    if (m.stored) problems.push(`${tag}: something was written to browser storage`);
+    if (m.stored) problems.push(`${tag}: something was stored outside the one "jr1-money" key`);
     if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `${w}x${h}-${name}.png`) });
     console.log(`${tag}: ${m.over > 0 ? "TOO TALL by " + m.over + "px" : "fits, " + m.spare + "px spare"} (1rem = ${m.rem.toFixed(1)}px)`);
     await page.close();
   }
   await browser.close(); server.close();
   if (problems.length) { console.error("\n" + problems.join("\n")); process.exit(1); }
-  console.log("\nAll sizes fit with no scrolling, no outside requests and nothing stored.");
+  console.log("\nAll screens fit with no scrolling, make no outside requests and store nothing beyond the one key.");
 })();
