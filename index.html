@@ -60,7 +60,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1re
 #app{height:100vh;height:100dvh;width:100%;max-width:30rem;margin:0 auto;display:flex;flex-direction:column;gap:.42rem;overflow-x:hidden;overflow-y:auto;
   padding:max(.6rem,env(safe-area-inset-top)) max(1.2rem,env(safe-area-inset-right)) max(.6rem,env(safe-area-inset-bottom)) max(1.2rem,env(safe-area-inset-left))}
 .top{display:flex;align-items:center;gap:.6rem;flex:none}
-h1{font-size:1.3rem;font-weight:700;margin:0;white-space:nowrap;letter-spacing:-.01em}
+h1{font-size:1.3rem;font-weight:700;margin:0;white-space:nowrap;letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .top{min-height:2.1rem}
 .back{border:0;background:none;color:var(--accent);font-size:1.05rem;font-weight:600;padding:.3rem .2rem .3rem 0;cursor:pointer;white-space:nowrap}
 /* one screen is shown at a time: the front page or one calculator */
@@ -164,21 +164,35 @@ button.ddrow{cursor:pointer}
 .ddrow.on em{color:var(--good)}
 .seg.main{height:2.6rem;border:1.5px solid var(--accent)}
 .seg.main button{font-size:1rem;font-weight:600;color:var(--accent)}
-/* front page */
-.home{justify-content:flex-start;gap:.7rem}
-.lead{font-size:1.05rem;color:var(--muted);margin:.5rem 0 0}
-.tools{display:flex;flex-direction:column;gap:.6rem}
-.tool{display:flex;align-items:center;gap:.9rem;width:100%;min-height:5.4rem;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:.9rem;padding:.8rem 1rem;cursor:pointer}
-.tool:active{border-color:var(--accent)}
-.tool .ic{flex:none;width:3.2rem;height:3.2rem;border-radius:.8rem;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--num);font-weight:600;font-size:1.5rem}
-.tool .tx{flex:1 1 auto;min-width:0}
-.tool b{display:block;font-size:1.2rem}
-.tool .tx span{font-size:.95rem;color:var(--muted)}
-.tool .fig{flex:none;text-align:right;font-family:var(--num);font-weight:600;font-size:1.05rem;white-space:nowrap}
-.tool .fig small{display:block;font-family:var(--body);font-weight:400;color:var(--muted);font-size:.8rem}
-.tool .fig:empty::after{content:"›";color:var(--accent);font-family:var(--body);font-size:1.7rem}
-.homefoot{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:.6rem}
-.homefoot .note{margin:0}
+/* figures carried from another calculator have a dashed box */
+.stepper.carried{border-style:dashed}
+.sel.carried{border:1.5px dashed var(--accent)}
+.lk{margin-top:.35rem}
+.readout{display:flex;align-items:center;justify-content:center;height:2.6rem;border:1px solid var(--line);border-radius:.55rem;font-family:var(--num);font-size:var(--field);font-weight:600;color:var(--muted)}
+.readout.warn{color:var(--warn);border-color:var(--warn)}
+/* calculators with a table and no chart sit at the top of the screen */
+.screen.sparse{justify-content:flex-start}
+table.mini{width:100%;font-size:.95rem;white-space:normal}
+table.mini th,table.mini td{padding:.2rem .3rem;border-bottom:0;position:static;background:none}
+table.mini thead th{font-size:.85rem;font-weight:400}
+table.mini td:not(:first-child){font-family:var(--num);font-weight:600;white-space:nowrap}
+table.mini tr.key td{border-top:1px solid var(--line);font-weight:700}
+.sw{display:inline-block;width:.65rem;height:.65rem;border-radius:.15rem;margin-right:.35rem}
+.pbars.all div{opacity:1}
+#info{margin-left:auto;padding:.2rem .7rem;min-height:0;font-size:.9rem;white-space:nowrap}
+/* front page: every calculator on one screen, in groups */
+.home{justify-content:flex-start;gap:.4rem}
+#homeGrid h2{font-size:.85rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:.45rem 0 .25rem}
+#homeGrid h2:first-child{margin-top:.2rem}
+.tiles{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.4rem}
+.tile{display:block;min-width:0;min-height:3.35rem;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:.7rem;padding:.4rem .7rem;cursor:pointer}
+.tile:active{border-color:var(--accent)}
+.tile b{display:block;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile span{display:block;font-size:.85rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile span.f{color:var(--accent);font-family:var(--num);font-weight:600;letter-spacing:-.02em}
+.homefoot{margin-top:auto;display:flex;align-items:flex-end;gap:.8rem}
+.homefoot .note{margin:0;font-size:.85rem;flex:1 1 auto}
+.homefoot .btn{flex:none;white-space:nowrap}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;flex:none}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:.55rem;padding:.3rem .45rem;min-width:0}
 .stat .v{font-family:var(--num);font-size:1.12rem;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -232,7 +246,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
 </head>
 <body>
 <main id="app">
-  <header class="top"><button type="button" class="back" id="back" hidden>‹ Tools</button><h1 id="ttl">JR1 Money</h1><span class="priv" id="priv">Kept on this device</span></header>
+  <header class="top"><button type="button" class="back" id="back" hidden>‹ Tools</button><h1 id="ttl">JR1 Money</h1><button type="button" class="btn small" id="info" aria-haspopup="dialog" hidden>How it works</button><span class="priv" id="priv">Kept on this device</span></header>
 
   <div class="screen" id="scPay" hidden>
 
@@ -348,6 +362,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
         <button type="button" data-step="ppDdAge" data-d="1" aria-label="Increase age drawdown starts">+</button></div></div>
       <div><span class="lbl" id="lsLbl">Tax-free lump sum</span><button type="button" class="pickbtn" id="lsBtn" data-open="shLump" aria-haspopup="dialog" aria-describedby="lsLbl">None</button></div>
     </div>
+    <div class="cap lk" hidden></div>
   </section>
 
   <section class="box" aria-label="Drawdown income">
@@ -403,6 +418,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
         <input id="ciRise" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done" placeholder="0">
         <button type="button" data-step="ciRise" data-d="1" aria-label="Increase yearly rise in the payment">+</button></div></div>
     </div>
+    <div class="cap lk" hidden></div>
   </section>
 
   <nav class="chips" aria-label="Compound interest options and detail">
@@ -417,15 +433,313 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   </section>
   </div>
 
+  <div class="screen sparse" id="scCmp" hidden>
+  <section class="box hero"><div class="cap" id="cmpCap">Take-home difference a month</div><output class="big" id="cmpBig">—</output><div class="cap" id="cmpSub">Enter the new salary to compare</div><div class="inc" id="cmpInc"></div></section>
+  <section class="box" aria-label="The two salaries">
+    <div class="g2 even">
+      <div><label for="cmpA">Salary now £</label>
+        <div class="stepper"><button type="button" data-step="cmpA" data-d="-500" aria-label="Decrease salary now">−</button>
+        <input id="cmpA" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter salary">
+        <button type="button" data-step="cmpA" data-d="500" aria-label="Increase salary now">+</button></div></div>
+      <div><label for="cmpB">New salary £</label>
+        <div class="stepper"><button type="button" data-step="cmpB" data-d="-500" aria-label="Decrease new salary">−</button>
+        <input id="cmpB" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter salary">
+        <button type="button" data-step="cmpB" data-d="500" aria-label="Increase new salary">+</button></div></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="Side by side"><div id="cmpTbl"></div></section>
+  </div>
+
+  <div class="screen sparse" id="scCv" hidden>
+  <section class="box hero"><div class="cap" id="cvCap">Pay a year</div><output class="big" id="cvBig">—</output><div class="cap" id="cvSub">Enter an amount to convert</div><div class="inc" id="cvInc"></div></section>
+  <section class="box" aria-label="Your pay">
+    <div class="g2 even">
+      <div><label for="cvAmount">Pay £</label>
+        <div class="stepper"><button type="button" data-step="cvAmount" data-d="-1" aria-label="Decrease pay">−</button>
+        <input id="cvAmount" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter pay">
+        <button type="button" data-step="cvAmount" data-d="1" aria-label="Increase pay">+</button></div></div>
+      <div><label for="cvPer">For each</label><select id="cvPer" class="sel"><option value="hour">Hour</option><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option><option value="year">Year</option></select></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="cvHours">Hours a week</label>
+        <div class="stepper"><button type="button" data-step="cvHours" data-d="-0.5" aria-label="Decrease hours a week">−</button>
+        <input id="cvHours" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="cvHours" data-d="0.5" aria-label="Increase hours a week">+</button></div></div>
+      <div><label for="cvDays">Days a week</label>
+        <div class="stepper"><button type="button" data-step="cvDays" data-d="-1" aria-label="Decrease days a week">−</button>
+        <input id="cvDays" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="cvDays" data-d="1" aria-label="Increase days a week">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="cvWeeks">Weeks a year</label>
+        <div class="stepper"><button type="button" data-step="cvWeeks" data-d="-1" aria-label="Decrease weeks a year">−</button>
+        <input id="cvWeeks" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="cvWeeks" data-d="1" aria-label="Increase weeks a year">+</button></div></div>
+      <div></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="Pay for each period"><div id="cvTbl"></div></section>
+  </div>
+
+  <div class="screen sparse" id="scBg" hidden>
+  <section class="box hero"><div class="cap" id="bgCap">To save each month</div><output class="big" id="bgBig">—</output><div class="cap" id="bgSub">Enter your monthly income</div><div class="inc" id="bgInc"></div></section>
+  <section class="box" aria-label="Your budget">
+    <div class="g2 even">
+      <div><label for="bgIncome">Monthly income £</label>
+        <div class="stepper"><button type="button" data-step="bgIncome" data-d="-50" aria-label="Decrease monthly income">−</button>
+        <input id="bgIncome" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter income">
+        <button type="button" data-step="bgIncome" data-d="50" aria-label="Increase monthly income">+</button></div></div>
+      <div><span class="lbl">Left to save</span><div class="readout" id="bgLeft">20%</div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="bgNeeds">Needs %</label>
+        <div class="stepper"><button type="button" data-step="bgNeeds" data-d="-5" aria-label="Decrease share for needs">−</button>
+        <input id="bgNeeds" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="bgNeeds" data-d="5" aria-label="Increase share for needs">+</button></div></div>
+      <div><label for="bgWants">Wants %</label>
+        <div class="stepper"><button type="button" data-step="bgWants" data-d="-5" aria-label="Decrease share for wants">−</button>
+        <input id="bgWants" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="bgWants" data-d="5" aria-label="Increase share for wants">+</button></div></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="The split"><div class="stack" id="bgBar"></div><div id="bgTbl"></div></section>
+  </div>
+
+  <div class="screen" id="scSg" hidden>
+  <section class="box hero"><div class="cap" id="sgCap">Save each month</div><output class="big" id="sgBig">—</output><div class="cap" id="sgSub">Enter the amount you want to reach</div><div class="inc" id="sgInc"></div></section>
+  <section class="box" aria-label="Your goal">
+    <div class="g2 even">
+      <div><label for="sgTarget">Target £</label>
+        <div class="stepper"><button type="button" data-step="sgTarget" data-d="-500" aria-label="Decrease target">−</button>
+        <input id="sgTarget" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter target">
+        <button type="button" data-step="sgTarget" data-d="500" aria-label="Increase target">+</button></div></div>
+      <div><label for="sgYears">Years</label>
+        <div class="stepper"><button type="button" data-step="sgYears" data-d="-1" aria-label="Decrease years">−</button>
+        <input id="sgYears" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="sgYears" data-d="1" aria-label="Increase years">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="sgStart">Have now £</label>
+        <div class="stepper"><button type="button" data-step="sgStart" data-d="-500" aria-label="Decrease amount you have now">−</button>
+        <input id="sgStart" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="sgStart" data-d="500" aria-label="Increase amount you have now">+</button></div></div>
+      <div><label for="sgRate">Interest a year %</label>
+        <div class="stepper"><button type="button" data-step="sgRate" data-d="-0.25" aria-label="Decrease interest rate">−</button>
+        <input id="sgRate" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="sgRate" data-d="0.25" aria-label="Increase interest rate">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><span class="lbl" id="sgFreqLbl">Paid in</span><div class="seg main" role="group" aria-labelledby="sgFreqLbl"><button type="button" data-set="sgFreq:weekly">Weekly</button><button type="button" data-set="sgFreq:monthly">Monthly</button></div></div>
+      <div></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box potbox" aria-label="Balance by year">
+    <div class="hd"><strong id="sgRead" data-title="Balance by year">Balance by year</strong><span class="pl"><span><i class="b-paid"></i>paid in</span><span><i class="b-grow"></i>interest</span></span></div>
+    <div class="pbars" id="sgBars" role="slider" tabindex="0" aria-label="Balance by year" aria-orientation="horizontal"></div>
+    <div class="pax" id="sgAx"></div>
+  </section>
+  </div>
+
+  <div class="screen" id="scMg" hidden>
+  <section class="box hero"><div class="cap" id="mgCap">Monthly payment</div><output class="big" id="mgBig">—</output><div class="cap" id="mgSub">Enter the property price and deposit</div><div class="inc" id="mgInc"></div></section>
+  <section class="box" aria-label="Your mortgage">
+    <div class="g2 even">
+      <div><label for="mgPrice">Property price £</label>
+        <div class="stepper"><button type="button" data-step="mgPrice" data-d="-5000" aria-label="Decrease property price">−</button>
+        <input id="mgPrice" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter price">
+        <button type="button" data-step="mgPrice" data-d="5000" aria-label="Increase property price">+</button></div></div>
+      <div><label for="mgDeposit">Deposit £</label>
+        <div class="stepper"><button type="button" data-step="mgDeposit" data-d="-1000" aria-label="Decrease deposit">−</button>
+        <input id="mgDeposit" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="mgDeposit" data-d="1000" aria-label="Increase deposit">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="mgRate">Interest rate %</label>
+        <div class="stepper"><button type="button" data-step="mgRate" data-d="-0.1" aria-label="Decrease interest rate">−</button>
+        <input id="mgRate" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="mgRate" data-d="0.1" aria-label="Increase interest rate">+</button></div></div>
+      <div><label for="mgYears">Term in years</label>
+        <div class="stepper"><button type="button" data-step="mgYears" data-d="-1" aria-label="Decrease term">−</button>
+        <input id="mgYears" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="mgYears" data-d="1" aria-label="Increase term">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="mgOver">Overpay a month £</label>
+        <div class="stepper"><button type="button" data-step="mgOver" data-d="-50" aria-label="Decrease monthly overpayment">−</button>
+        <input id="mgOver" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="mgOver" data-d="50" aria-label="Increase monthly overpayment">+</button></div></div>
+      <div><span class="lbl" id="mgSdLbl">Stamp duty</span><button type="button" class="pickbtn" id="mgSd" data-go="stamp-duty" aria-describedby="mgSdLbl">Work it out</button></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box potbox" aria-label="Balance by year">
+    <div class="hd"><strong id="mgRead" data-title="Balance by year">Balance by year</strong></div>
+    <div class="pbars" id="mgBars" role="slider" tabindex="0" aria-label="Balance by year" aria-orientation="horizontal"></div>
+    <div class="pax" id="mgAx"></div>
+  </section>
+  </div>
+
+  <div class="screen sparse" id="scSd" hidden>
+  <section class="box hero"><div class="cap" id="sdCap">Stamp duty to pay</div><output class="big" id="sdBig">—</output><div class="cap" id="sdSub">Enter the property price</div><div class="inc" id="sdInc"></div></section>
+  <section class="box" aria-label="The purchase">
+    <div class="g2 even">
+      <div><label for="sdPrice">Property price £</label>
+        <div class="stepper"><button type="button" data-step="sdPrice" data-d="-5000" aria-label="Decrease property price">−</button>
+        <input id="sdPrice" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter price">
+        <button type="button" data-step="sdPrice" data-d="5000" aria-label="Increase property price">+</button></div></div>
+      <div><label for="sdRegion">Where</label><select id="sdRegion" class="sel"><option value="eng">England or NI</option><option value="sco">Scotland</option><option value="wal">Wales</option></select></div>
+    </div>
+    <div style="margin-top:.4rem"><span class="lbl" id="sdBuyerLbl">You are buying</span><div class="seg main" role="group" aria-labelledby="sdBuyerLbl"><button type="button" data-set="sdBuyer:first">First home</button><button type="button" data-set="sdBuyer:mover">Next home</button><button type="button" data-set="sdBuyer:extra">Extra home</button></div></div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="How the tax builds up"><div id="sdTbl"></div></section>
+  </div>
+
+  <div class="screen" id="scLn" hidden>
+  <section class="box hero"><div class="cap" id="lnCap">Monthly payment</div><output class="big" id="lnBig">—</output><div class="cap" id="lnSub">Enter the amount to borrow</div><div class="inc" id="lnInc"></div></section>
+  <section class="box" aria-label="Your loan">
+    <div class="g2 even">
+      <div><label for="lnAmount">Amount £</label>
+        <div class="stepper"><button type="button" data-step="lnAmount" data-d="-500" aria-label="Decrease amount">−</button>
+        <input id="lnAmount" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter amount">
+        <button type="button" data-step="lnAmount" data-d="500" aria-label="Increase amount">+</button></div></div>
+      <div><label for="lnRate">APR %</label>
+        <div class="stepper"><button type="button" data-step="lnRate" data-d="-0.5" aria-label="Decrease APR">−</button>
+        <input id="lnRate" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="lnRate" data-d="0.5" aria-label="Increase APR">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="lnYears">Years</label>
+        <div class="stepper"><button type="button" data-step="lnYears" data-d="-1" aria-label="Decrease years">−</button>
+        <input id="lnYears" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="lnYears" data-d="1" aria-label="Increase years">+</button></div></div>
+      <div></div>
+    </div>
+  </section>
+  <section class="box potbox" aria-label="Balance by year">
+    <div class="hd"><strong id="lnRead" data-title="Balance by year">Balance by year</strong></div>
+    <div class="pbars" id="lnBars" role="slider" tabindex="0" aria-label="Balance by year" aria-orientation="horizontal"></div>
+    <div class="pax" id="lnAx"></div>
+  </section>
+  </div>
+
+  <div class="screen" id="scDb" hidden>
+  <section class="box hero"><div class="cap" id="dbCap">Debt free in</div><output class="big" id="dbBig">—</output><div class="cap" id="dbSub">Enter the balance and what you pay a month</div><div class="inc" id="dbInc"></div></section>
+  <section class="box" aria-label="Your debt">
+    <div class="g2 even">
+      <div><label for="dbBalance">Balance £</label>
+        <div class="stepper"><button type="button" data-step="dbBalance" data-d="-100" aria-label="Decrease balance">−</button>
+        <input id="dbBalance" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter balance">
+        <button type="button" data-step="dbBalance" data-d="100" aria-label="Increase balance">+</button></div></div>
+      <div><label for="dbRate">APR %</label>
+        <div class="stepper"><button type="button" data-step="dbRate" data-d="-0.5" aria-label="Decrease APR">−</button>
+        <input id="dbRate" type="number" inputmode="decimal" step="any" min="0" autocomplete="off" enterkeyhint="done">
+        <button type="button" data-step="dbRate" data-d="0.5" aria-label="Increase APR">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="dbPay">Paying a month £</label>
+        <div class="stepper"><button type="button" data-step="dbPay" data-d="-10" aria-label="Decrease monthly payment">−</button>
+        <input id="dbPay" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter payment">
+        <button type="button" data-step="dbPay" data-d="10" aria-label="Increase monthly payment">+</button></div></div>
+      <div><label for="dbExtra">Extra a month £</label>
+        <div class="stepper"><button type="button" data-step="dbExtra" data-d="-10" aria-label="Decrease extra monthly payment">−</button>
+        <input id="dbExtra" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="dbExtra" data-d="10" aria-label="Increase extra monthly payment">+</button></div></div>
+    </div>
+  </section>
+  <section class="box potbox" aria-label="Balance over time">
+    <div class="hd"><strong id="dbRead" data-title="Balance over time">Balance over time</strong></div>
+    <div class="pbars" id="dbBars" role="slider" tabindex="0" aria-label="Balance over time" aria-orientation="horizontal"></div>
+    <div class="pax" id="dbAx"></div>
+  </section>
+  </div>
+
+  <div class="screen sparse" id="scDv" hidden>
+  <section class="box hero"><div class="cap" id="dvCap">Take-home a year</div><output class="big" id="dvBig">—</output><div class="cap" id="dvSub">Enter your profit</div><div class="inc" id="dvInc"></div></section>
+  <section class="box" aria-label="Your income">
+    <div><span class="lbl" id="dvModeLbl">You are</span><div class="seg main" role="group" aria-labelledby="dvModeLbl"><button type="button" data-set="dvMode:sole">Sole trader</button><button type="button" data-set="dvMode:director">Company director</button></div></div>
+    <div class="g2 even" id="dvSoleRow" style="margin-top:.4rem">
+      <div><label for="dvProfit">Profit a year £</label>
+        <div class="stepper"><button type="button" data-step="dvProfit" data-d="-500" aria-label="Decrease profit">−</button>
+        <input id="dvProfit" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter profit">
+        <button type="button" data-step="dvProfit" data-d="500" aria-label="Increase profit">+</button></div></div>
+      <div></div>
+    </div>
+    <div class="g2 even" id="dvDirRow" style="margin-top:.4rem" hidden>
+      <div><label for="dvSalary">Salary a year £</label>
+        <div class="stepper"><button type="button" data-step="dvSalary" data-d="-500" aria-label="Decrease salary">−</button>
+        <input id="dvSalary" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="dvSalary" data-d="500" aria-label="Increase salary">+</button></div></div>
+      <div><label for="dvDivs">Dividends a year £</label>
+        <div class="stepper"><button type="button" data-step="dvDivs" data-d="-500" aria-label="Decrease dividends">−</button>
+        <input id="dvDivs" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="dvDivs" data-d="500" aria-label="Increase dividends">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="dvYear">Tax year</label><select id="dvYear" class="sel"><option value="2025">2025/26</option><option value="2026">2026/27</option><option value="2027">2027/28</option></select></div>
+      <div><label for="dvRegion">Tax region</label><select id="dvRegion" class="sel"><option value="eng">England</option><option value="sco">Scotland</option><option value="wal">Wales</option><option value="ni">N. Ireland</option></select></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="Where it goes"><div id="dvTbl"></div></section>
+  </div>
+
+  <div class="screen sparse" id="scCg" hidden>
+  <section class="box hero"><div class="cap" id="cgCap">Capital gains tax</div><output class="big" id="cgBig">—</output><div class="cap" id="cgSub">Enter what you sold for and what you paid</div><div class="inc" id="cgInc"></div></section>
+  <section class="box" aria-label="The sale">
+    <div class="g2 even">
+      <div><label for="cgSold">Sold for £</label>
+        <div class="stepper"><button type="button" data-step="cgSold" data-d="-500" aria-label="Decrease sale price">−</button>
+        <input id="cgSold" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter price">
+        <button type="button" data-step="cgSold" data-d="500" aria-label="Increase sale price">+</button></div></div>
+      <div><label for="cgPaid">Bought for £</label>
+        <div class="stepper"><button type="button" data-step="cgPaid" data-d="-500" aria-label="Decrease purchase price">−</button>
+        <input id="cgPaid" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="cgPaid" data-d="500" aria-label="Increase purchase price">+</button></div></div>
+    </div>
+    <div class="g2 even">
+      <div><label for="cgCosts">Costs £</label>
+        <div class="stepper"><button type="button" data-step="cgCosts" data-d="-100" aria-label="Decrease costs">−</button>
+        <input id="cgCosts" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="cgCosts" data-d="100" aria-label="Increase costs">+</button></div></div>
+      <div><label for="cgIncome">Your income a year £</label>
+        <div class="stepper"><button type="button" data-step="cgIncome" data-d="-500" aria-label="Decrease income">−</button>
+        <input id="cgIncome" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="cgIncome" data-d="500" aria-label="Increase income">+</button></div></div>
+    </div>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="How the tax builds up"><div id="cgTbl"></div></section>
+  </div>
+
+  <div class="screen sparse" id="scIh" hidden>
+  <section class="box hero"><div class="cap" id="ihCap">Inheritance tax</div><output class="big" id="ihBig">—</output><div class="cap" id="ihSub">Enter the value of the estate</div><div class="inc" id="ihInc"></div></section>
+  <section class="box" aria-label="The estate">
+    <div class="g2 even">
+      <div><label for="ihEstate">Estate value £</label>
+        <div class="stepper"><button type="button" data-step="ihEstate" data-d="-10000" aria-label="Decrease estate value">−</button>
+        <input id="ihEstate" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Enter value">
+        <button type="button" data-step="ihEstate" data-d="10000" aria-label="Increase estate value">+</button></div></div>
+      <div><label for="ihHome">Home value £</label>
+        <div class="stepper"><button type="button" data-step="ihHome" data-d="-10000" aria-label="Decrease home value">−</button>
+        <input id="ihHome" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0">
+        <button type="button" data-step="ihHome" data-d="10000" aria-label="Increase home value">+</button></div></div>
+    </div>
+    <label class="chk"><input type="checkbox" data-chk="ihKids"><span>Home goes to children or grandchildren</span></label>
+    <label class="chk"><input type="checkbox" data-chk="ihSpouse"><span>Add a late spouse's unused allowances</span></label>
+    <div class="cap lk" hidden></div>
+  </section>
+  <section class="box grow" aria-label="How the tax builds up"><div id="ihTbl"></div></section>
+  </div>
+
   <div class="screen home" id="scHome">
-    <p class="lead">Pick a calculator. Each one fits on one screen.</p>
-    <nav class="tools" aria-label="Calculators">
-      <button type="button" class="tool" data-go="take-home"><span class="ic" aria-hidden="true">£</span><span class="tx"><b>Take-home pay</b><span>Pay after tax, NI, pension and deductions</span></span><span class="fig" id="hPay"></span></button>
-      <button type="button" class="tool" data-go="pension"><span class="ic" aria-hidden="true">P</span><span class="tx"><b>Pension pot</b><span>Your pot, drawdown income and State Pension</span></span><span class="fig" id="hPot"></span></button>
-      <button type="button" class="tool" data-go="compound"><span class="ic" aria-hidden="true">%</span><span class="tx"><b>Compound interest</b><span>Savings growth with weekly or monthly payments</span></span><span class="fig" id="hCi"></span></button>
-    </nav>
+    <div id="homeGrid"></div>
     <div class="homefoot">
-      <p class="note">What you enter is kept in this browser, on this device, so it is here when you come back. It is never sent anywhere. These are estimates, not financial or tax advice.</p>
+      <p class="note">Figures carry between calculators and are kept in this browser only, never sent anywhere. Estimates, not financial or tax advice.</p>
       <button type="button" class="btn small" id="resetAll">Clear my figures</button>
     </div>
   </div>
@@ -534,6 +848,11 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <p class="note">This is an estimate, not financial advice. What you enter is kept in this browser only and is never sent anywhere.</p>
 </div></dialog>
 
+<dialog class="sheet" id="shInfo" aria-labelledby="infoT"><header><h2 id="infoT">How it works</h2><button type="button" class="done">Done</button></header><div class="body">
+  <div id="infoTbl"></div>
+  <div id="infoNotes"></div>
+</div></dialog>
+
 <script>
 
 // Rates for each tax year the calculator offers. Income tax outside Scotland and National Insurance are the same in all three years.
@@ -560,7 +879,14 @@ const blank=()=>({region:"eng",salary:null,pensionMode:"pct",eePct:5,erPct:3,net
   // pension pot screen: cautious defaults
   ppAge:null,ppRetire:67,ppPot:null,ppMonthly:null,ppGrowth:2,ppDraw:3.5,spOn:true,spWeekly:241.30,spAge:67,
   // compound interest
-  ciStart:null,ciRate:4,ciPay:null,ciFreq:"monthly",ciYears:10,ciRise:null,ciComp:"monthly",ciInfl:null,ciView:null});
+  ciStart:null,ciRate:4,ciPay:null,ciFreq:"monthly",ciYears:10,ciRise:null,ciComp:"monthly",ciInfl:null,ciView:null,
+  // the other calculators; null means "not typed in", which lets a figure carry over from another calculator
+  cmpA:null,cmpB:null,cvAmount:null,cvPer:"year",cvHours:37.5,cvDays:5,cvWeeks:52,bgIncome:null,bgNeeds:50,bgWants:30,
+  sgTarget:null,sgStart:null,sgYears:5,sgRate:null,sgFreq:"monthly",sgView:null,
+  mgPrice:null,mgDeposit:null,mgRate:4.5,mgYears:25,mgOver:null,mgView:null,sdPrice:null,sdRegion:null,sdBuyer:"mover",
+  lnAmount:null,lnRate:7.9,lnYears:5,lnView:null,dbBalance:null,dbRate:24.9,dbPay:null,dbExtra:null,dbView:null,
+  dvMode:"sole",dvProfit:null,dvSalary:null,dvDivs:null,dvYear:null,dvRegion:null,cgSold:null,cgPaid:null,cgCosts:null,cgIncome:null,
+  ihEstate:null,ihHome:null,ihKids:true,ihSpouse:false});
 let S=blank();   // everything the user has entered; kept in this browser only (see save and load)
 
 const v=x=>+x||0;
@@ -707,22 +1033,120 @@ function ciCalc(s){
   return {rows,years,steps,bal,paid,interest:bal-paid,real:bal/Math.pow(1+v(s.ciInfl)/100,years)};
 }
 
+/* ---------- borrowing: mortgage, loan, debt ---------- */
+// Pays a balance down month by month: interest is added, then the payment comes off.
+// Returns how many months it takes, the interest paid, and the balance as it falls.
+function payDown(bal,i,pay,max=1200){
+  const rows=[{m:0,bal:Math.max(0,bal)}];let interest=0,m=0;
+  if(!(bal>0))return {months:0,interest:0,rows,never:false};
+  if(!(pay>bal*i))return {months:Infinity,interest:Infinity,rows,never:true};
+  while(bal>0.005&&m<max){const add=bal*i;interest+=add;bal=Math.max(0,bal+add-pay);m++;rows.push({m,bal});}
+  // a short run keeps every month; a longer one keeps the end of each year and the final month
+  return {months:m,interest,rows:m<=36?rows:rows.filter(r=>r.m%12===0||r.m===m),never:false};
+}
+// The level monthly payment that clears a loan in a set number of months.
+const levelPay=(loan,i,n)=>!(loan>0)||!(n>0)?0:i>0?loan*i/(1-Math.pow(1+i,-n)):loan/n;
+// Mortgage: the quoted yearly rate is charged a twelfth each month. `over` is an extra payment every month.
+function mortgageCalc(loan,rate,years,over=0){
+  const i=rate/1200,n=Math.round(years*12),pay=levelPay(loan,i,n),base=payDown(loan,i,pay),extra=payDown(loan,i,pay+Math.max(0,over));
+  return {pay,months:n,base,extra,saved:base.interest-extra.interest,sooner:base.months-extra.months};
+}
+// Personal loan: the rate is an APR, so the monthly rate is the one that compounds to it over a year.
+function loanCalc(amount,apr,years){
+  const i=Math.pow(1+apr/100,1/12)-1,n=Math.round(years*12),pay=levelPay(amount,i,n),run=payDown(amount,i,pay);
+  return {pay,months:n,interest:run.interest,total:amount+run.interest,rows:run.rows};
+}
+// Card or other debt at an APR, with a fixed monthly payment and an optional extra amount.
+function debtCalc(balance,apr,pay,extra=0){
+  const i=Math.pow(1+apr/100,1/12)-1,base=payDown(balance,i,pay),more=payDown(balance,i,pay+Math.max(0,extra));
+  return {i,firstInterest:balance*i,base,more,saved:base.never||more.never?0:base.interest-more.interest,sooner:base.never||more.never?0:base.months-more.months};
+}
+
+/* ---------- savings goal ---------- */
+// The regular payment that turns a starting amount into a target. Interest is added monthly, as in the compound interest calculator.
+function goalCalc(target,start,years,rate,steps){
+  const n=Math.max(1,Math.round(years*steps)),f=Math.pow(Math.pow(1+rate/1200,12),1/steps),grown=start*Math.pow(f,n);
+  const need=Math.max(0,(target-grown)*(f===1?1/n:(f-1)/(Math.pow(f,n)-1)));
+  return {need,n,paid:need*n,grown,interest:Math.max(target,grown)-start-need*n};
+}
+
+/* ---------- stamp duty and its Scottish and Welsh equivalents ---------- */
+// Each band is [top of the band, rate]. `first` is first-time buyer relief, `extra` the surcharge on an additional home.
+const SD={
+  eng:{name:"Stamp Duty Land Tax",bands:[[125000,0],[250000,.02],[925000,.05],[1500000,.10],[Infinity,.12]],
+    first:[[300000,0],[500000,.05]],firstMax:500000,extra:.05},
+  sco:{name:"Land and Buildings Transaction Tax",bands:[[145000,0],[250000,.02],[325000,.05],[750000,.10],[Infinity,.12]],
+    first:[[175000,0],[250000,.02],[325000,.05],[750000,.10],[Infinity,.12]],firstMax:Infinity,extra:.08},
+  wal:{name:"Land Transaction Tax",bands:[[225000,0],[400000,.06],[750000,.075],[1500000,.10],[Infinity,.12]],
+    extraBands:[[180000,.05],[250000,.085],[400000,.10],[750000,.125],[1500000,.15],[Infinity,.17]]}
+};
+function stampDuty(price,region,buyer){
+  const r=SD[region]||SD.eng,p=Math.max(0,price),extraHome=buyer==="extra"&&p>=40000;
+  const relief=buyer==="first"&&r.first&&p<=r.firstMax;
+  const bands=extraHome&&r.extraBands?r.extraBands:relief?r.first:r.bands;
+  const rows=[];let lo=0,tax=0;
+  for(const [hi,rate] of bands){if(p>lo){const part=Math.min(p,hi)-lo;rows.push({lo,hi:Math.min(p,hi),rate,tax:part*rate});tax+=part*rate;}lo=hi;}
+  const surcharge=extraHome&&r.extra?p*r.extra:0;
+  return {name:r.name,rows,surcharge,surchargeRate:r.extra||0,tax:tax+surcharge,relief,noRelief:buyer==="first"&&!relief};
+}
+
+/* ---------- self-employed and dividends ---------- */
+// Dividend tax rates for the basic, higher and additional bands. They rose by two points in April 2026.
+const DIV={"2025":[.0875,.3375,.3935],"2026":[.1075,.3575,.3935],"2027":[.1075,.3575,.3935]};
+const allowanceFor=income=>Math.max(0,12570-Math.max(0,(income-100000)/2));
+const incomeBands=(year,region)=>region==="sco"?(YEARS[year]||YEARS["2027"]).sco:RUK;
+// National Insurance worked on the whole year: `main` between £12,570 and £50,270, 2% above.
+const niYear=(pay,main)=>Math.max(0,Math.min(pay,50270)-12570)*main+Math.max(0,pay-50270)*.02;
+// Sole trader: income tax on the profit and Class 4 National Insurance at 6% and 2%.
+function soleCalc(profit,year,region){
+  const p=Math.max(0,profit),tax=taxCum(incomeBands(year,region),Math.max(0,p-allowanceFor(p)),12),ni=niYear(p,.06);
+  return {gross:p,tax,ni,divTax:0,net:p-tax-ni};
+}
+// Company director: salary taxed as pay (8% and 2% National Insurance), dividends on top at the dividend rates.
+// The allowance goes to the salary first. Dividends always use the UK bands, even for Scottish taxpayers,
+// and the first £500 of taxable dividends is charged at 0%.
+function directorCalc(salary,divs,year,region){
+  const s=Math.max(0,salary),d=Math.max(0,divs),allow=allowanceFor(s+d),taxSal=Math.max(0,s-allow),taxDiv=Math.max(0,d-Math.max(0,allow-s));
+  const tax=taxCum(incomeBands(year,region),taxSal,12),ni=niYear(s,.08),rates=DIV[year]||DIV["2027"];
+  const from=taxSal+Math.min(500,taxDiv),to=taxSal+taxDiv,edges=[0,37700,125140,Infinity];
+  let divTax=0;for(let k=0;k<3;k++)divTax+=Math.max(0,Math.min(to,edges[k+1])-Math.max(from,edges[k]))*rates[k];
+  return {gross:s+d,tax,ni,divTax,net:s+d-tax-ni-divTax};
+}
+
+/* ---------- capital gains and inheritance tax ---------- */
+// Gains above the £3,000 yearly allowance: 18% on what fits in the rest of the basic-rate band, 24% above.
+function cgtCalc(gain,income){
+  const taxable=Math.max(0,gain-3000),room=Math.max(0,37700-Math.max(0,income-12570)),low=Math.min(taxable,room),high=taxable-low;
+  return {gain,exempt:Math.min(Math.max(0,gain),3000),taxable,low,high,tax:low*.18+high*.24};
+}
+// Inheritance tax: 40% above the £325,000 allowance. A home left to children or grandchildren adds up to £175,000,
+// which shrinks by £1 for every £2 the estate is over £2 million. A late spouse's unused allowances double both.
+function ihtCalc(estate,home,kids,spouse){
+  const e=Math.max(0,estate),k=spouse?2:1,nil=325000*k;
+  const res=kids?Math.min(Math.min(e,Math.max(0,home)),Math.max(0,175000*k-Math.max(0,(e-2000000)/2))):0;
+  const taxable=Math.max(0,e-nil-res);
+  return {estate:e,nil,res,taxable,tax:taxable*.4,left:e-taxable*.4};
+}
+
 /* ---------- interface ---------- */
 const $=id=>document.getElementById(id);
-const NUM=["salary","eePct","erPct","netTarget","bonusValue","bsValue","risePct","bik","allowance","children","ppAge","ppRetire","ppPot","ppMonthly","ppGrowth","ppDraw","spWeekly","spAge","ppDdAge","lsAmount","lsAge","ciStart","ciRate","ciPay","ciYears","ciRise","ciInfl"];
-const SEL=["region","method","bsType","riseFrom","loan","pg","year","ciComp"];
+const NUM=["salary","eePct","erPct","netTarget","bonusValue","bsValue","risePct","bik","allowance","children","ppAge","ppRetire","ppPot","ppMonthly","ppGrowth","ppDraw","spWeekly","spAge","ppDdAge","lsAmount","lsAge","ciStart","ciRate","ciPay","ciYears","ciRise","ciInfl",
+  "cmpA","cmpB","cvAmount","cvHours","cvDays","cvWeeks","bgIncome","bgNeeds","bgWants","sgTarget","sgStart","sgYears","sgRate","mgPrice","mgDeposit","mgRate","mgYears","mgOver",
+  "sdPrice","lnAmount","lnRate","lnYears","dbBalance","dbRate","dbPay","dbExtra","dvProfit","dvSalary","dvDivs","cgSold","cgPaid","cgCosts","cgIncome","ihEstate","ihHome"];
+const SEL=["region","method","bsType","riseFrom","loan","pg","year","ciComp","cvPer"];
 let TAB="home",FROM_PAY=0,PAY_C=null,POT=null,CI=null;
 const monthOpts=(sel,val)=>{sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}"${i+1==val?" selected":""}>${m}</option>`).join("");};
 const setSeg=(a,b,on)=>{$(a).setAttribute("aria-pressed",on);$(b).setAttribute("aria-pressed",!on);};
 // salary and target are shown with thousands separators, so they are text fields, not number fields
-const MONEY=["salary","netTarget","ppPot","ppMonthly","ciStart","ciPay"];
+const MONEY=["salary","netTarget","ppPot","ppMonthly","ciStart","ciPay","cmpA","cmpB","cvAmount","bgIncome","sgTarget","sgStart","mgPrice","mgDeposit","mgOver",
+  "sdPrice","lnAmount","dbBalance","dbPay","dbExtra","dvProfit","dvSalary","dvDivs","cgSold","cgPaid","cgCosts","cgIncome","ihEstate","ihHome"];
 const show=id=>S[id]==null?"":MONEY.includes(id)?S[id].toLocaleString("en-GB",{maximumFractionDigits:2}):S[id];
 const readNum=id=>{const x=parseFloat(MONEY.includes(id)?$(id).value.replace(/[^\d.]/g,""):$(id).value);return isNaN(x)?null:x;};
 function syncForm(){
   MONTHS=monthsFor(S.year);
   NUM.forEach(id=>{$(id).value=show(id);});
   monthOpts($("riseFrom"),S.riseFrom);
-  ["region","method","bsType","loan","pg","year","ciComp"].forEach(id=>{$(id).value=S[id];});
+  ["region","method","bsType","loan","pg","year","ciComp","cvPer"].forEach(id=>{$(id).value=S[id];});
   setSeg("pmPct","pmTarget",S.pensionMode==="pct");
   setSeg("btAmount","btPct",S.bonusType==="amount");
   renderList("sac");renderList("post");update();
@@ -736,11 +1160,17 @@ function bind(){
   SEL.forEach(id=>$(id).addEventListener("change",()=>{const x=$(id).value;S[id]=id==="riseFrom"?+x:x;if(id==="year")syncForm();else update();}));
   document.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.step;
     // an empty age starts at 40; an empty field that shows a carried-over figure starts from that figure
-    const from=S[id]!=null?S[id]:id==="ppAge"?40- +b.dataset.d:id==="ppMonthly"?Math.round(FROM_PAY):id==="ppDdAge"&&POT?POT.dd:0;
+    const from=S[id]!=null?S[id]:id==="ppAge"?40- +b.dataset.d:CARRY[id]?Math.round(v(CARRY[id].get())):id==="ppDdAge"&&POT?POT.dd:0;
     S[id]=Math.max(0,Math.round((from+ +b.dataset.d)*100)/100);$(id).value=show(id);update();}));
   chartPick("pBars",()=>POT?POT.rows.length:0,(i,d)=>{S.ppView=Math.min(POT.end,Math.max(POT.age,i!=null?POT.age+i:(S.ppView==null?POT.dd:S.ppView)+d));paintPot();save();});
   chartPick("cBars",()=>CI?CI.rows.length:0,(i,d)=>{S.ciView=Math.min(CI.years,Math.max(0,i!=null?i:(S.ciView==null?CI.years:S.ciView)+d));paintCi();save();});
-  ["ppMonthly","ppDdAge","lsAge"].forEach(id=>$(id).addEventListener("blur",()=>update()));
+  Object.keys(CARRY).concat("ppDdAge","lsAge").forEach(id=>$(id).addEventListener("blur",()=>update()));
+  for(const id in CARRYSEL)$(id).addEventListener("change",e=>{S[id]=e.target.value===CARRYSEL[id].get()?null:e.target.value;update();});
+  document.querySelectorAll("[data-set]").forEach(b=>b.addEventListener("click",()=>{const [k,val]=b.dataset.set.split(":");S[k]=val;update();}));
+  document.querySelectorAll("[data-chk]").forEach(c=>c.addEventListener("change",()=>{S[c.dataset.chk]=c.checked;update();}));
+  for(const p of ["sg","mg","ln","db"])chartPick(p+"Bars",()=>CH[p]?CH[p].n:0,(i,d)=>{const c=CH[p],at=S[c.key]==null?(c.def==null?(d>0?-1:c.n):c.def):S[c.key];
+    S[c.key]=Math.min(c.n-1,Math.max(0,i!=null?i:at+d));paintCh(p);save();});
+  $("info").addEventListener("click",openInfo);
   $("spOn").addEventListener("change",e=>{S.spOn=e.target.checked;update();});
   $("ddTbl").addEventListener("click",e=>{const b=e.target.closest("[data-rate]");if(!b)return;S.ppDraw=+b.dataset.rate;$("ppDraw").value=show("ppDraw");update();});
   for(const [id,t] of [["lsNone","none"],["lsMax","max"],["lsAmt","amount"]])$(id).addEventListener("click",()=>{S.lsType=t;update();});
@@ -799,7 +1229,9 @@ function needTarget(on){const l=$("tgtLbl");l.textContent=on?"Enter a target fir
 // Nothing is ever sent anywhere. "Clear my figures" removes the key.
 const KEY="jr1-money";
 const ENUMS={region:["eng","sco","wal","ni"],loan:["","p1","p2","p4","p5"],pg:["0","1"],method:["sacrifice","netpay","ras"],pensionMode:["pct","target"],
-  bonusType:["amount","pct"],bsType:["none","pct","amount","target"],year:Object.keys(YEARS),lsType:["none","max","amount"],ciFreq:["weekly","monthly"],ciComp:["monthly","yearly","daily"]};
+  bonusType:["amount","pct"],bsType:["none","pct","amount","target"],year:Object.keys(YEARS),lsType:["none","max","amount"],ciFreq:["weekly","monthly"],ciComp:["monthly","yearly","daily"],
+  cvPer:["hour","day","week","month","year"],sgFreq:["weekly","monthly"],sdBuyer:["first","mover","extra"],dvMode:["sole","director"],
+  sdRegion:["eng","sco","wal"],dvYear:Object.keys(YEARS),dvRegion:["eng","sco","wal","ni"]};
 function save(){
   // nothing is stored until something has been entered, and clearing everything removes the key
   try{const j=JSON.stringify(S);if(j===JSON.stringify(blank()))localStorage.removeItem(KEY);else localStorage.setItem(KEY,j);}catch(e){}
@@ -818,13 +1250,32 @@ function load(){
   }catch(e){}
   return s;
 }
-// ---- moving between the front page and the calculators ----
-const ROUTES={"take-home":"pay",pension:"pot",compound:"ci"},TITLES={home:"JR1 Money",pay:"Take-home pay",pot:"Pension pot",ci:"Compound interest"};
+// ---- the calculators, in the groups shown on the front page: [key, address, name, one-line description, screen id] ----
+const TOOLS=[
+  ["Pay",[["pay","take-home","Take-home pay","After tax, NI and pension","scPay"],["cmp","compare","Compare salaries","What a pay rise is worth","scCmp"],
+    ["cv","convert","Pay converter","Hourly, daily and yearly pay","scCv"],["bg","budget","Budget","Needs, wants and savings","scBg"]]],
+  ["Saving and retirement",[["pot","pension","Pension pot","Pot, drawdown, State Pension","scPot"],["ci","compound","Compound interest","How savings grow","scCi"],
+    ["sg","goal","Savings goal","What to save to get there","scSg"]]],
+  ["Home and borrowing",[["mg","mortgage","Mortgage","Payment and overpaying","scMg"],["sd","stamp-duty","Stamp duty","Tax on buying a home","scSd"],
+    ["ln","loan","Loan","Payment and total cost","scLn"],["db","debt","Debt payoff","When a debt is cleared","scDb"]]],
+  ["Tax",[["dv","self-employed","Self-employed","Sole trader or dividends","scDv"],["cg","capital-gains","Capital gains","Tax when you sell","scCg"],
+    ["ih","inheritance","Inheritance tax","Tax on an estate","scIh"]]]
+];
+const ALL=TOOLS.flatMap(g=>g[1]);
+const TITLES={home:"JR1 Money",cg:"Capital gains tax"};
+const FIG={};        // the last figure worked out in each calculator, shown on the front page
+const INFOTBL={};    // a year-by-year table for the Detail panel, where a calculator has one
+let BG=null;         // the budget split, used by other calculators
+function buildHome(){
+  $("homeGrid").innerHTML=TOOLS.map(([name,list])=>`<h2>${name}</h2><div class="tiles">`
+    +list.map(t=>`<button type="button" class="tile" data-go="${t[1]}"><b>${t[2]}</b><span id="h-${t[0]}">${t[3]}</span></button>`).join("")+"</div>").join("");
+}
 function route(){
-  TAB=ROUTES[location.hash.slice(1)]||"home";
-  for(const [t,id] of [["home","scHome"],["pay","scPay"],["pot","scPot"],["ci","scCi"]])$(id).hidden=t!==TAB;
-  $("back").hidden=TAB==="home";$("priv").hidden=TAB!=="home";$("ttl").textContent=TITLES[TAB];
-  document.title=TAB==="home"?"JR1 Money":TITLES[TAB]+" · JR1 Money";
+  const hit=ALL.find(t=>t[1]===location.hash.slice(1));TAB=hit?hit[0]:"home";
+  $("scHome").hidden=TAB!=="home";for(const t of ALL)$(t[4]).hidden=t[0]!==TAB;
+  const title=TITLES[TAB]||(hit?hit[2]:"JR1 Money");
+  $("back").hidden=TAB==="home";$("priv").hidden=TAB!=="home";$("info").hidden=!NOTES[TAB];$("ttl").textContent=title;
+  document.title=TAB==="home"?"JR1 Money":title+" · JR1 Money";
   update();
 }
 function ratesText(s){
@@ -834,12 +1285,246 @@ function ratesText(s){
     +` National Insurance: 8% on £12,570 to £50,270 a year, 2% above. Student loans: 9% above ${gbp(L.p1)} (Plan 1), ${gbp(L.p2)} (Plan 2), ${gbp(L.p4)} (Plan 4), ${gbp(L.p5)} (Plan 5); postgraduate 6% above ${gbp(L.pg)}.`
     +` Child Benefit: ${gbp(y.cb.first,2)} a week for the first child, ${gbp(y.cb.other,2)} for each other child; the charge is 1% for each £200 of income over £60,000.`;
 }
-function update(){PAY_C=updatePay()||null;updatePot(PAY_C);updateCi();updateHome();save();}
+
+// ---- figures carried between calculators ----
+// A field listed here shows a figure from another calculator until the user types their own.
+// Typing changes it in that calculator only; the source is never altered. Emptying the field links it again.
+const r2=x=>Math.round(x*100)/100;
+const cvFactor=()=>({hour:v(S.cvHours)*v(S.cvWeeks),day:v(S.cvDays)*v(S.cvWeeks),week:v(S.cvWeeks),month:12,year:1})[S.cvPer]||1;   // pay periods in a year
+const CARRY={
+  ppMonthly:{from:"Take-home pay",get:()=>FROM_PAY>0?FROM_PAY:null},
+  cmpA:{from:"Take-home pay",get:()=>S.salary},
+  cvAmount:{from:"Take-home pay",get:()=>S.salary>0?r2(S.salary/cvFactor()):null},
+  bgIncome:{from:"Take-home pay",get:()=>PAY_C?r2(PAY_C.typical):null},
+  dvSalary:{from:"Take-home pay",get:()=>S.salary},
+  cgIncome:{from:"Take-home pay",get:()=>PAY_C?Math.round(PAY_C.R.ani):null},
+  ciPay:{from:"Budget",get:()=>BG&&BG.save>0?r2(S.ciFreq==="weekly"?BG.save*12/52:BG.save):null},
+  sgStart:{from:"Compound interest",get:()=>S.ciStart},
+  sgRate:{from:"Compound interest",get:()=>S.ciRate},
+  mgPrice:{from:"Stamp duty",get:()=>S.sdPrice},
+  sdPrice:{from:"Mortgage",get:()=>S.mgPrice},
+  ihHome:{from:"Mortgage",get:()=>S.mgPrice!=null?S.mgPrice:S.sdPrice}
+};
+// The same for choices from a list. Picking the source's value again links the choice back to it.
+const CARRYSEL={
+  sdRegion:{from:"Take-home pay",get:()=>({eng:"eng",ni:"eng",sco:"sco",wal:"wal"})[S.region]},
+  dvYear:{from:"Take-home pay",get:()=>S.year},
+  dvRegion:{from:"Take-home pay",get:()=>S.region}
+};
+const eff=id=>S[id]!=null?S[id]:CARRY[id].get();
+const effSel=id=>S[id]!=null?S[id]:CARRYSEL[id].get();
+function paintCarry(){
+  const by=new Map();
+  const mark=(el,on,from)=>{(el.closest(".stepper")||el).classList.toggle("carried",on);if(on){const sc=el.closest(".screen");by.set(sc,(by.get(sc)||new Set()).add(from));}};
+  for(const id in CARRY){
+    const el=$(id),val=S[id]==null?CARRY[id].get():null;
+    if(S[id]==null&&document.activeElement!==el)el.value=val==null?"":val.toLocaleString("en-GB",{maximumFractionDigits:2,useGrouping:MONEY.includes(id)});
+    mark(el,val!=null,CARRY[id].from);
+  }
+  for(const id in CARRYSEL){$(id).value=effSel(id);mark($(id),S[id]==null,CARRYSEL[id].from);}
+  document.querySelectorAll(".lk").forEach(l=>{
+    const src=by.get(l.closest(".screen"));l.hidden=!src;
+    if(src)l.textContent=`Dashed boxes are carried from ${[...src].join(" and ")}. Change one and it changes here only.`;
+  });
+}
+
+function update(){
+  PAY_C=updatePay()||null;
+  updateBg();updatePot(PAY_C);updateCi();updateSg();
+  if(TAB==="cmp"||TAB==="home")updateCmp();
+  if(TAB==="cv"||TAB==="home")updateCv();
+  updateMg();updateSd();updateLn();updateDb();updateDv();updateCg();updateIh();
+  document.querySelectorAll("[data-set]").forEach(b=>{const [k,val]=b.dataset.set.split(":");b.setAttribute("aria-pressed",S[k]===val);});
+  document.querySelectorAll("[data-chk]").forEach(c=>{c.checked=!!S[c.dataset.chk];});
+  paintCarry();updateHome();save();
+}
 function updateHome(){
-  const fig=(id,a,t)=>{$(id).innerHTML=a==null?"":`${gbpShort(a)}<small>${t}</small>`;};
-  fig("hPay",PAY_C?PAY_C.typical:null,"a month");
-  fig("hPot",POT?POT.pot:null,POT?"at "+POT.dd:"");
-  fig("hCi",CI?CI.bal:null,CI?`in ${CI.years} year${CI.years===1?"":"s"}`:"");
+  FIG.pay=PAY_C?`${gbp(PAY_C.typical)} a month`:null;
+  FIG.pot=POT?`${gbpShort(POT.pot)} at ${POT.dd}`:null;
+  FIG.ci=CI?`${gbpShort(CI.bal)} in ${CI.years} year${CI.years===1?"":"s"}`:null;
+  for(const t of ALL){const el=$("h-"+t[0]);el.textContent=FIG[t[0]]||t[3];el.classList.toggle("f",!!FIG[t[0]]);}
+}
+
+// ---- small helpers for the newer calculators ----
+const sgn=(x,d=0)=>(x<0?"−":"+")+"£"+Math.abs(x).toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d});
+const dur=m=>m===Infinity?"never":m<12?`${m} month${m===1?"":"s"}`:`${Math.floor(m/12)} yr${m>=24?"s":""}`+(m%12?` ${m%12} mth${m%12===1?"":"s"}`:"");
+const setHero=(p,cap,big,sub,inc="")=>{$(p+"Cap").textContent=cap;$(p+"Big").textContent=big;$(p+"Sub").textContent=sub;$(p+"Inc").innerHTML=inc;};
+const incRows=rows=>rows.filter(Boolean).map(([t,a,cls=""])=>`<span class="${cls}">${t}</span><b class="${cls}"></b><b class="${cls}">${a}</b>`).join("");
+const mini=(head,rows)=>`<table class="mini"><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>`
+  +rows.filter(Boolean).map(r=>`<tr class="${r.key?"key":""}">${r.c.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")+"</tbody></table>";
+const wrapTbl=html=>`<div class="tablewrap" tabindex="0" role="region" aria-label="Year by year">${html}</div>`;
+// charts for the newer calculators: one bar per row, and the figure for the bar that is tapped
+const CH={};
+function setChart(p,rows,parts,key,def,label,axis){
+  const mx=Math.max(1,...rows.map(r=>parts(r).reduce((a,x)=>a+x[1],0)));
+  $(p+"Bars").innerHTML=rows.map(r=>"<div>"+parts(r).map(([cls,x])=>`<i class="${cls}" style="flex:0 0 ${Math.max(0,x)/mx*100}%"></i>`).join("")+"</div>").join("");
+  $(p+"Ax").innerHTML=rows.length?`<span>${axis[0]}</span><span>tap a bar for its value</span><span>${axis[1]}</span>`:"";
+  CH[p]={n:rows.length,key,def,label,title:$(p+"Read").dataset.title};paintCh(p);
+}
+function paintCh(p){
+  const c=CH[p],b=$(p+"Bars");if(!c)return;
+  const pick=S[c.key]==null?c.def:S[c.key],i=pick==null||!c.n?null:Math.min(c.n-1,Math.max(0,pick));
+  b.classList.toggle("all",i==null);
+  if(i==null){[...b.children].forEach(el=>el.classList.remove("on"));$(p+"Read").textContent=c.title;return;}
+  paintBars(p+"Bars",p+"Read",i,c.label(i),0,c.n-1,i,c.label(i));
+}
+const amortLabel=rows=>i=>`${rows[i].m===0?"Start":rows[i].m%12===0?"Year "+rows[i].m/12:dur(rows[i].m)}: ${gbp(rows[i].bal)} left`;
+const amortTbl=rows=>wrapTbl(mini(["After","Balance left"],rows.map(r=>({c:[r.m===0?"Start":dur(r.m),gbp(r.bal)]}))));
+
+// ---- compare salaries ----
+function updateCmp(){
+  FIG.cmp=null;
+  const A=eff("cmpA"),B=S.cmpB;
+  if(!(A>0&&B>0)){setHero("cmp","Take-home difference a month","—",A>0?"Enter the new salary to compare":"Enter both salaries");$("cmpTbl").innerHTML="";return;}
+  const a=compute(Object.assign({},S,{salary:A})),b=compute(Object.assign({},S,{salary:B})),dm=b.typical-a.typical,dy=b.net-a.net,dg=b.gross-a.gross;
+  setHero("cmp","Take-home difference a month",sgn(dm,2),`${sgn(dy)} a year`+(dg?` · you keep ${pc(dy/dg,0)} of the ${dg>0?"rise":"cut"}`:""));
+  const row=(t,f,key)=>({c:[t,f(a),f(b)],key}),loan=c=>c.R.sum("loan");
+  $("cmpTbl").innerHTML=mini(["","Now","New"],[row("Take-home a month",c=>gbp(c.typical),1),row("Take-home a year",c=>gbp(c.net)),row("Income tax",c=>gbp(c.R.sum("tax"))),
+    row("National Insurance",c=>gbp(c.R.sum("ni"))),row("Into your pension",c=>gbp(c.R.sum("pen")+c.R.sum("bsac"))),loan(a)||loan(b)?row("Student loan",c=>gbp(loan(c))):null]);
+  FIG.cmp=`${sgn(dm)} a month`;
+}
+// ---- pay converter ----
+function updateCv(){
+  FIG.cv=null;
+  const amt=eff("cvAmount"),f=cvFactor(),ok=amt>0&&v(S.cvHours)>0&&v(S.cvDays)>0&&v(S.cvWeeks)>0;
+  if(!ok){setHero("cv","Pay a year","—",amt>0?"Hours, days and weeks must be above 0":"Enter an amount to convert");$("cvTbl").innerHTML="";return;}
+  // a carried amount is the Take-home salary shown per hour, day and so on, so the yearly figure is that salary exactly
+  const year=S.cvAmount==null&&S.salary>0?S.salary:amt*f,net=compute(Object.assign({},S,{salary:year})).net,w=v(S.cvWeeks);
+  setHero("cv","Pay a year",gbp(year),`${gbp(net)} take-home a year`);
+  const per=[["hour","An hour",v(S.cvHours)*w],["day","A day",v(S.cvDays)*w],["week","A week",w],["month","A month",12],["year","A year",1]];
+  $("cvTbl").innerHTML=mini(["","Before tax","Take-home"],per.map(([k,t,n])=>({c:[t,gbp(year/n,n>12?2:0),gbp(net/n,n>12?2:0)],key:k===S.cvPer})));
+  FIG.cv=`${gbp(year)} a year`;
+}
+// ---- budget ----
+function updateBg(){
+  const inc=eff("bgIncome"),n=v(S.bgNeeds),w=v(S.bgWants),sv=Math.round((100-n-w)*100)/100;
+  BG=inc>0&&sv>=0?{inc,sv,save:inc*sv/100}:null;FIG.bg=null;
+  $("bgLeft").textContent=sv>=0?sv+"%":"over 100%";$("bgLeft").classList.toggle("warn",sv<0);
+  if(!BG){setHero("bg","To save each month","—",inc>0?"Needs and wants add up to more than 100%":"Enter your monthly income");$("bgBar").innerHTML="";$("bgTbl").innerHTML="";return;}
+  setHero("bg","To save each month",gbp(BG.save),`${sv}% of ${gbp(inc)} a month`);
+  const parts=[["Needs","pen",n],["Wants","ni",w],["Savings","net",sv]];
+  $("bgBar").innerHTML=parts.map(p=>`<span class="b-${p[1]}" style="width:${p[2]}%"></span>`).join("");
+  $("bgTbl").innerHTML=mini(["","Share","A week","A month","A year"],parts.map(([t,k,p])=>({c:[`<i class="sw b-${k}"></i>${t}`,p+"%",gbp(inc*p/100*12/52),gbp(inc*p/100),gbp(inc*p/100*12)],key:t==="Savings"})));
+  FIG.bg=`${gbp(BG.save)} to save a month`;
+}
+// ---- savings goal ----
+function updateSg(){
+  FIG.sg=null;INFOTBL.sg="";
+  const T=v(S.sgTarget),start=v(eff("sgStart")),rate=v(eff("sgRate")),years=Math.min(60,Math.floor(v(S.sgYears))),weekly=S.sgFreq==="weekly",per=weekly?"week":"month";
+  if(!(T>0&&years>=1)){setHero("sg",`Save each ${per}`,"—",T>0?"Enter the number of years":"Enter the amount you want to reach");setChart("sg",[],()=>[],"sgView",null,()=>"",["",""]);return;}
+  const G=goalCalc(T,start,years,rate,weekly?52:12);
+  setHero("sg",`Save each ${per}`,gbp(G.need,2),G.need>0?`to reach ${gbp(T)} in ${years} year${years===1?"":"s"}`:"What you have now gets there without saving more",
+    incRows([["You pay in",gbp(G.paid)],["Interest earned",gbp(G.interest)]]));
+  const rows=ciCalc(Object.assign({},S,{ciStart:start,ciPay:G.need,ciRate:rate,ciYears:years,ciFreq:S.sgFreq,ciComp:"monthly",ciRise:0})).rows;
+  setChart("sg",rows,r=>[["g",r.bal-r.paid],["p",Math.min(r.bal,r.paid)]],"sgView",rows.length-1,i=>`${i?"Year "+i:"Start"}: ${gbp(rows[i].bal)}`,["start","year "+years]);
+  INFOTBL.sg=wrapTbl(mini(["Year","Paid in","Interest","Balance"],rows.map(r=>({c:[r.year,gbp(r.paid),gbp(r.bal-r.paid),gbp(r.bal)]}))));
+  FIG.sg=`${gbp(G.need)} a ${per}`;
+}
+// ---- mortgage ----
+function updateMg(){
+  FIG.mg=null;INFOTBL.mg="";
+  const price=v(eff("mgPrice")),loan=Math.max(0,price-v(S.mgDeposit)),years=Math.min(50,v(S.mgYears)),over=v(S.mgOver);
+  const duty=price>0?stampDuty(price,effSel("sdRegion"),S.sdBuyer).tax:null;
+  $("mgSd").textContent=duty==null?"Work it out":gbp(duty);
+  if(!(loan>0&&years>=1)){
+    setHero("mg","Monthly payment","—",price>0?(loan>0?"Enter the term in years":"The deposit covers the whole price"):"Enter the property price and deposit");
+    setChart("mg",[],()=>[],"mgView",null,()=>"",["",""]);return;
+  }
+  const M=mortgageCalc(loan,v(S.mgRate),years,over),run=over>0?M.extra:M.base;
+  setHero("mg","Monthly payment",gbp(M.pay,2),`${gbp(loan)} loan · ${pc(loan/price,0)} of the price`,incRows([["Interest",gbp(run.interest)],["Total repaid",gbp(loan+run.interest)],
+    over>0?["Overpaying saves",gbp(M.saved),"tot"]:null,over>0?["Mortgage cleared",dur(M.sooner)+" sooner"]:null]));
+  setChart("mg",run.rows,r=>[["p",r.bal]],"mgView",null,amortLabel(run.rows),["start",dur(run.months)]);
+  INFOTBL.mg=amortTbl(run.rows);FIG.mg=`${gbp(M.pay)} a month`;
+}
+// ---- stamp duty ----
+function updateSd(){
+  FIG.sd=null;
+  const price=v(eff("sdPrice")),region=effSel("sdRegion"),R=stampDuty(price,region,S.sdBuyer),short={eng:"Stamp duty",sco:"LBTT",wal:"Land Transaction Tax"}[region];
+  if(!(price>0)){setHero("sd",`${short} to pay`,"—","Enter the property price");$("sdTbl").innerHTML="";return;}
+  setHero("sd",`${short} to pay`,gbp(R.tax),`${pc(R.tax/price)} of the price`+(R.noRelief?(region==="wal"?" · Wales has no first-home relief":" · too dear for first-home relief"):R.relief?" · with first-home relief":""));
+  $("sdTbl").innerHTML=mini(["Part of the price","Rate","Tax"],R.rows.map(r=>({c:[`${gbp(r.lo)} to ${gbp(r.hi)}`,Math.round(r.rate*1000)/10+"%",gbp(r.tax)]}))
+    .concat(R.surcharge?[{c:["Extra home, whole price",R.surchargeRate*100+"%",gbp(R.surcharge)]}]:[],[{c:["Total","",gbp(R.tax)],key:1}]));
+  FIG.sd=`${gbp(R.tax)} to pay`;
+}
+// ---- loan ----
+function updateLn(){
+  FIG.ln=null;INFOTBL.ln="";
+  const amt=v(S.lnAmount),years=Math.min(40,v(S.lnYears));
+  if(!(amt>0&&years>0)){setHero("ln","Monthly payment","—",amt>0?"Enter the number of years":"Enter the amount to borrow");setChart("ln",[],()=>[],"lnView",null,()=>"",["",""]);return;}
+  const L=loanCalc(amt,v(S.lnRate),years);
+  setHero("ln","Monthly payment",gbp(L.pay,2),`${gbp(amt)} over ${dur(L.months)} at ${v(S.lnRate)}% APR`,incRows([["Interest",gbp(L.interest)],["Total repaid",gbp(L.total)]]));
+  setChart("ln",L.rows,r=>[["p",r.bal]],"lnView",null,amortLabel(L.rows),["start",dur(L.months)]);
+  INFOTBL.ln=amortTbl(L.rows);FIG.ln=`${gbp(L.pay)} a month`;
+}
+// ---- debt payoff ----
+function updateDb(){
+  FIG.db=null;INFOTBL.db="";
+  const bal=v(S.dbBalance),pay=v(S.dbPay),extra=v(S.dbExtra);
+  if(!(bal>0&&pay>0)){setHero("db","Debt free in","—",bal>0?"Enter what you pay a month":"Enter the balance and what you pay a month");setChart("db",[],()=>[],"dbView",null,()=>"",["",""]);return;}
+  const D=debtCalc(bal,v(S.dbRate),pay,extra),run=extra>0&&!D.more.never?D.more:D.base;
+  if(run.never){setHero("db","Debt free in","Never",`The interest is ${gbp(D.firstInterest,2)} a month, more than the payment`);setChart("db",[],()=>[],"dbView",null,()=>"",["",""]);return;}
+  setHero("db","Debt free in",dur(run.months),`${gbp(run.interest)} interest · ${gbp(bal+run.interest)} repaid in all`,
+    incRows([extra>0&&!D.base.never?["The extra saves",gbp(D.saved),"tot"]:null,extra>0&&!D.base.never?["Debt cleared",dur(D.sooner)+" sooner"]:null,
+      extra>0&&D.base.never?["Without the extra","never cleared","tot"]:null]));
+  setChart("db",run.rows,r=>[["w",r.bal]],"dbView",null,amortLabel(run.rows),["start",dur(run.months)]);
+  INFOTBL.db=amortTbl(run.rows);FIG.db=`clear in ${dur(run.months)}`;
+}
+// ---- self-employed and dividends ----
+function updateDv(){
+  FIG.dv=null;
+  const sole=S.dvMode==="sole",year=effSel("dvYear"),region=effSel("dvRegion");
+  $("dvSoleRow").hidden=!sole;$("dvDirRow").hidden=sole;
+  const T=sole?soleCalc(v(S.dvProfit),year,region):directorCalc(v(eff("dvSalary")),v(S.dvDivs),year,region);
+  if(!(T.gross>0)){setHero("dv","Take-home a year","—",sole?"Enter your profit":"Enter your salary and dividends");$("dvTbl").innerHTML="";return;}
+  setHero("dv","Take-home a year",gbp(T.net),`${gbp(T.net/12)} a month · you keep ${pc(T.net/T.gross,0)}`);
+  $("dvTbl").innerHTML=mini(["","A year","A month"],[
+    sole?{c:["Profit",gbp(T.gross),gbp(T.gross/12)]}:{c:["Salary and dividends",gbp(T.gross),gbp(T.gross/12)]},
+    {c:[sole?"Income tax":"Income tax on salary","−"+gbp(T.tax),"−"+gbp(T.tax/12)]},
+    {c:[sole?"National Insurance (Class 4)":"National Insurance on salary","−"+gbp(T.ni),"−"+gbp(T.ni/12)]},
+    sole?null:{c:["Tax on dividends","−"+gbp(T.divTax),"−"+gbp(T.divTax/12)]},
+    {c:["Take-home",gbp(T.net),gbp(T.net/12)],key:1}]);
+  FIG.dv=`${gbp(T.net)} a year`;
+}
+// ---- capital gains tax ----
+function updateCg(){
+  FIG.cg=null;
+  const sold=v(S.cgSold),gain=sold-v(S.cgPaid)-v(S.cgCosts),R=cgtCalc(gain,v(eff("cgIncome")));
+  if(!(sold>0)){setHero("cg","Capital gains tax","—","Enter what you sold for and what you paid");$("cgTbl").innerHTML="";return;}
+  setHero("cg","Capital gains tax",gbp(R.tax),gain>0?`${gbp(gain-R.tax)} of the ${gbp(gain)} gain kept`:"No gain, so no tax");
+  $("cgTbl").innerHTML=mini(["","Amount","Tax"],[{c:[gain<0?"Loss":"Gain",gbp(gain),""]},{c:["Tax-free allowance","−"+gbp(R.exempt),""]},
+    R.low?{c:["Taxed at 18%",gbp(R.low),gbp(R.low*.18)]}:null,R.high?{c:["Taxed at 24%",gbp(R.high),gbp(R.high*.24)]}:null,{c:["Tax to pay","",gbp(R.tax)],key:1}]);
+  FIG.cg=`${gbp(R.tax)} to pay`;
+}
+// ---- inheritance tax ----
+function updateIh(){
+  FIG.ih=null;
+  const R=ihtCalc(v(S.ihEstate),v(eff("ihHome")),S.ihKids,S.ihSpouse);
+  if(!(R.estate>0)){setHero("ih","Inheritance tax","—","Enter the value of the estate");$("ihTbl").innerHTML="";return;}
+  setHero("ih","Inheritance tax",gbp(R.tax),`${gbp(R.left)} left after tax · ${pc(R.tax/R.estate)} of the estate`);
+  $("ihTbl").innerHTML=mini(["","Amount"],[{c:["Estate",gbp(R.estate)]},{c:["Tax-free allowance","−"+gbp(R.nil)]},R.res?{c:["Allowance for the home","−"+gbp(R.res)]}:null,
+    {c:["Taxed at 40%",gbp(R.taxable)]},{c:["Tax to pay",gbp(R.tax)],key:1}]);
+  FIG.ih=`${gbp(R.tax)} to pay`;
+}
+// ---- the Detail panel for the newer calculators: how each is worked out ----
+const END="This is an estimate, not financial or tax advice. What you enter is kept in this browser only and is never sent anywhere.";
+const NOTES={
+  cmp:["Both salaries are worked out with everything set in Take-home pay: the tax year, region, pension, salary sacrifice, student loan and other deductions. Only the salary changes.","A bonus entered as a % of salary changes with the salary. The month shown is a normal month without any bonus."],
+  cv:["The yearly figure is the pay multiplied by the hours, days and weeks you work. Use 52 weeks if you are paid for holidays, fewer if you are not.","Take-home uses everything set in Take-home pay, with this yearly figure as the salary. Take-home for an hour, day or week is the yearly take-home shared out evenly."],
+  bg:["Needs are things you must pay: housing, bills, food, travel to work, minimum debt payments. Wants are everything else you choose to spend on. What is left is for saving or paying debt off faster.","50% for needs, 30% for wants and 20% for savings is a common starting point. Change the shares to match your own costs."],
+  sg:["This is the compound interest sum worked backwards: the regular payment that, with interest added monthly, reaches the target on time. Weekly payments are counted as 52 a year.","Tax on interest and price rises are not included."],
+  mg:["A repayment mortgage: each month interest is charged on what is still owed, at a twelfth of the yearly rate, and the rest of the payment reduces the loan. The rate is assumed to stay the same for the whole term.","An overpayment is added to every monthly payment and comes straight off the loan. Lenders often limit overpayments to 10% of the balance a year without a charge. Fees are not included."],
+  sd:["England and Northern Ireland: 0% up to £125,000, 2% to £250,000, 5% to £925,000, 10% to £1.5 million, 12% above. A first home up to £500,000 pays 0% up to £300,000 and 5% above. An extra home adds 5% of the whole price.","Scotland (Land and Buildings Transaction Tax): 0% up to £145,000, 2% to £250,000, 5% to £325,000, 10% to £750,000, 12% above. A first home pays 0% up to £175,000. An extra home adds 8% of the whole price.","Wales (Land Transaction Tax): 0% up to £225,000, 6% to £400,000, 7.5% to £750,000, 10% to £1.5 million, 12% above. There is no first-home relief. An extra home uses higher rates from 5% to 17%.","Rates for homes bought by people, as they stood in 2026/27. The extra-home rates apply from £40,000. Surcharges for buyers who live abroad are not included."],
+  ln:["A fixed-rate loan repaid in equal monthly payments. The APR is the yearly cost; the monthly rate used is the one that compounds to it over a year. Fees not already in the APR are not included."],
+  db:["Each month interest is added at the monthly rate that compounds to the APR, then your payment comes off. The payment is assumed to stay the same every month, with nothing new added to the debt.","If the payment is no more than the interest, the debt is never cleared. Minimum payments that shrink as the balance falls take far longer than a fixed payment."],
+  dv:["Sole trader: income tax on the profit, and Class 4 National Insurance at 6% between £12,570 and £50,270 and 2% above. Class 2 is no longer compulsory.","Company director: the salary is taxed as pay, with National Insurance at 8% and 2% worked out over the whole year. Dividends sit on top of the salary. The first £500 is charged at 0%, then 10.75%, 35.75% and 39.35% in the basic, higher and additional bands from April 2026 (8.75%, 33.75% and 39.35% in 2025/26). Dividends use the UK bands in every region.","The tax-free allowance is £12,570 and is reduced when income is over £100,000. Corporation tax, employer's National Insurance, student loans and payments on account are not included."],
+  cg:["The gain is the sale price less what you paid and your costs of buying and selling. The first £3,000 of gains in a tax year is tax free. The rest is taxed at 18% where it fits in what is left of your basic-rate band, and 24% above that. Your income for the year decides how much of the band is left.","These rates apply to shares and to property that is not your main home. Your main home is normally exempt. Losses from other sales and reliefs for businesses are not included."],
+  ih:["Tax is 40% of the estate above £325,000. A home left to children or grandchildren adds up to £175,000, limited to the value of the home and reduced by £1 for every £2 the estate is over £2 million. Unused allowances from a late husband, wife or civil partner can be added, doubling both.","Anything left to a husband, wife or civil partner is exempt, and so are gifts to charity. Gifts made in the seven years before death, trusts and business or farm reliefs are not included. Most unused pension pots count as part of the estate from April 2027."]
+};
+function openInfo(){
+  const t=ALL.find(x=>x[0]===TAB);if(!t||!NOTES[TAB])return;
+  $("infoT").textContent=TITLES[TAB]||t[2];$("infoTbl").innerHTML=INFOTBL[TAB]||"";
+  $("infoNotes").innerHTML=NOTES[TAB].concat(END).map(n=>`<p class="note">${n}</p>`).join("");
+  $("shInfo").showModal();
 }
 // A field that has not been typed in shows a figure carried over from elsewhere, and follows it.
 function carry(id,val){if(S[id]==null&&document.activeElement!==$(id))$(id).value=val==null?"":val.toLocaleString("en-GB",{maximumFractionDigits:2,useGrouping:MONEY.includes(id)});}
@@ -851,7 +1536,6 @@ function updatePot(payC){
   // The monthly payment carries over from the Take-home calculator (yours plus your employer's) and follows it
   // until the user types their own figure. Emptying the field links it again.
   const linked=S.ppMonthly==null,monthly=linked?FROM_PAY:S.ppMonthly;
-  carry("ppMonthly",FROM_PAY>0?FROM_PAY:null);
   $("spOn").checked=S.spOn;
   $("spTxt").textContent=`Add State Pension, ${gbp(v(S.spWeekly)*52)} a year from ${Math.floor(v(S.spAge))}`;
   chip("cSP",`${gbp(v(S.spWeekly),2)} a week`,S.spOn);
@@ -912,17 +1596,17 @@ function updateCi(){
   setSeg("ciWeekly","ciMonthly",S.ciFreq==="weekly");
   const per=S.ciFreq==="weekly"?"week":"month",infl=v(S.ciInfl);
   chip("cCiOpt",infl>0?`added ${S.ciComp} · prices ${infl}%`:`interest added ${S.ciComp}`,S.ciComp!=="monthly"||infl>0);
-  const ok=v(S.ciYears)>=1&&(v(S.ciStart)>0||v(S.ciPay)>0);
+  const pay=v(eff("ciPay")),ok=v(S.ciYears)>=1&&(v(S.ciStart)>0||pay>0);   // the payment may be carried from the Budget calculator
   if(!ok){
     CI=null;$("cCap").textContent="Balance at the end";$("cBal").textContent="—";$("cRead").textContent="Balance by year";
     $("cSub").textContent=v(S.ciYears)>=1?"Enter a starting amount or a regular payment":"Enter the number of years";
     ["cInc","cBars","cAx","ciKv","ciTbl"].forEach(id=>$(id).innerHTML="");
     return;
   }
-  const R=CI=ciCalc(S);
+  const R=CI=ciCalc(Object.assign({},S,{ciPay:pay}));
   $("cCap").textContent=`Balance after ${R.years} year${R.years===1?"":"s"}`;
   $("cBal").textContent=gbp(R.bal);
-  $("cSub").textContent=[v(S.ciStart)>0?`${gbp(v(S.ciStart))} to start`:"",v(S.ciPay)>0?`${gbp(v(S.ciPay),v(S.ciPay)%1?2:0)} a ${per} paid in`:""].filter(Boolean).join(" · ");
+  $("cSub").textContent=[v(S.ciStart)>0?`${gbp(v(S.ciStart))} to start`:"",pay>0?`${gbp(pay,pay%1?2:0)} a ${per} paid in`:""].filter(Boolean).join(" · ");
   const line=(t,a,cls="")=>`<span class="${cls}">${t}</span><b class="${cls}"></b><b class="${cls}">${gbp(a)}</b>`;
   $("cInc").innerHTML=line("Paid in",R.paid)+line("Interest earned",R.interest)+(infl>0?line("Worth in today's money",R.real,"tot"):"");
   const mx=Math.max(1,R.bal);
@@ -1074,7 +1758,7 @@ function updatePay(){
   return C;
 }
 if(typeof document!=="undefined"&&document.getElementById("tbl")){
-  S=load();bind();syncForm();route();
+  S=load();buildHome();bind();syncForm();route();
   // the service worker keeps a copy of the app files (never anything you enter) so it opens quickly and works offline
   if("serviceWorker" in navigator&&isSecureContext&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 }

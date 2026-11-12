@@ -2,11 +2,14 @@
 
 UK money calculators, served at **https://money.jr1.com**.
 
-A front page lists the calculators. Each opens on its own screen with a "‹ Tools" button back to the front page:
+The front page lists every calculator, in groups, with the last figure worked out in each. Each opens on its own screen with a "‹ Tools" button back to the front page.
 
-- **Take-home pay:** pay after tax, National Insurance, pension and any other deductions, for tax years 2025/26, 2026/27 and 2027/28.
-- **Pension pot:** the pot when drawdown starts, the income each drawdown rate gives and how long the pot lasts, with the State Pension as a tick box and a tax-free lump sum as an option.
-- **Compound interest:** how savings grow from a starting amount and weekly or monthly payments.
+| Group | Calculators |
+|---|---|
+| Pay | Take-home pay, Compare salaries, Pay converter, Budget |
+| Saving and retirement | Pension pot, Compound interest, Savings goal |
+| Home and borrowing | Mortgage, Stamp duty, Loan, Debt payoff |
+| Tax | Self-employed (sole trader or dividends), Capital gains, Inheritance tax |
 
 ## Ethos
 
@@ -40,9 +43,31 @@ Every size in the CSS is in `rem`. `1rem` is set from the screen so the page is 
 
 The whole state (`S`) is saved to `localStorage` under the key `jr1-money` after every change and read back on load (`save` and `load` in the script). `load` only accepts fields it knows, of the right type. Nothing is written until something has been entered, and "Clear my figures" removes the key. To add a field, add it to `blank()`; if it is a choice from a list, add the list to `ENUMS`.
 
+## Figures carried between calculators
+
+A field can show a figure from another calculator until the user types their own. It has a dashed box while it is carried, and a line under the inputs says where it came from. Typing changes it in that calculator only and never alters the source. Emptying the field links it again.
+
+| Field | Carried from |
+|---|---|
+| Pension pot: paid in a month | Take-home pay: your pension plus your employer's |
+| Compare salaries: salary now | Take-home pay: salary |
+| Pay converter: pay | Take-home pay: salary, shown for the chosen period |
+| Budget: monthly income | Take-home pay: a normal month's take-home |
+| Self-employed: director's salary, tax year, region | Take-home pay |
+| Capital gains: your income | Take-home pay: income counted for tax |
+| Compound interest: regular payment | Budget: the amount to save |
+| Savings goal: have now, interest rate | Compound interest |
+| Mortgage: property price | Stamp duty, and the other way round |
+| Stamp duty: where | Take-home pay: tax region |
+| Inheritance tax: home value | Mortgage: property price |
+
+The table lives in `CARRY` (number fields) and `CARRYSEL` (choices from a list) in the script. A carried field is `null` in the state; `eff(id)` gives the figure in use. To carry a new field, add it to `CARRY` with where it comes from and a function that returns the figure.
+
 ## Moving between screens
 
-The address ends in `#take-home`, `#pension` or `#compound` for a calculator and nothing for the front page (`route` in the script). The phone's back button works, and a calculator can be bookmarked.
+`TOOLS` in the script lists every calculator: its key, address, name, one-line description and screen. The front page is built from it. The address ends in `#` and the calculator's address (`#take-home`, `#mortgage` and so on) and in nothing for the front page (`route` in the script). The phone's back button works, and a calculator can be bookmarked.
+
+To add a calculator: write its maths as a plain function with tests, add its screen, an `update` function, a row in `TOOLS`, notes in `NOTES` for the "How it works" panel, and a state in `tests/layout.check.cjs`.
 
 ## Hosting
 
@@ -65,3 +90,16 @@ Rates for each tax year are in the `YEARS` table at the top of the script. Incom
 ## Compound interest
 
 `ciCalc` compounds the yearly rate as often as interest is added (monthly, yearly or daily), then spreads that growth evenly over the payment periods (52 weeks or 12 months). Each period the balance earns interest, then the payment is added.
+
+## The other calculators
+
+Each has a plain function for its maths, tested in `tests/calc.test.mjs`, and notes on its rules in `NOTES`, shown by the "How it works" button.
+
+- **Compare salaries** and **Pay converter** run the Take-home pay sum with a different salary, so they follow every Take-home setting.
+- **Mortgage**, **Loan** and **Debt payoff** share `payDown`, which pays a balance down month by month. A mortgage charges a twelfth of its yearly rate each month; a loan or card uses the monthly rate that compounds to its APR.
+- **Savings goal** is the compound interest sum worked backwards (`goalCalc`).
+- **Stamp duty** covers England and Northern Ireland, Scotland (LBTT) and Wales (LTT), with first-home relief and the extra-home rates. The bands are in `SD`.
+- **Self-employed** covers a sole trader (income tax and Class 4) and a company director (salary plus dividends). Dividend rates for each year are in `DIV`.
+- **Capital gains** uses the £3,000 allowance and the 18% and 24% rates. **Inheritance tax** uses the £325,000 allowance, the £175,000 home allowance with its taper, and a late spouse's allowances.
+
+These tax rules change. Check `SD`, `DIV`, the Class 4 rates and the capital gains and inheritance figures against GOV.UK each April and after each Budget, and update the matching text in `NOTES`.
