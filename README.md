@@ -82,7 +82,7 @@ Rates for each tax year are in the `YEARS` table at the top of the script. Incom
 `potCalc` works month by month in three stages: saving until retirement (the pot grows, then the payment is added), waiting until drawdown starts (growth only), and drawdown (growth, then a twelfth of the yearly income is taken). Everything is in today's money, so the growth rate is the rate after price rises and charges.
 
 - **Defaults are cautious:** 2% growth, 3.5% drawdown, retire at 67.
-- **Drawdown** cannot start before the normal minimum pension age (`minAccessAge`): 55, rising to 57 on 6 April 2028.
+- **Drawdown** can start from the normal minimum pension age (`minAccessAge`): 55, rising to 57 on 6 April 2028. It defaults to the retirement age and can be earlier; the monthly payment then carries on until retirement.
 - **Tax-free lump sum:** up to 25% of the pot, capped at the Lump Sum Allowance (`LSA`, £268,275), taken at or before the drawdown age.
 - **State Pension** default is the full new State Pension for 2026/27 (£241.30 a week). Update `spWeekly` in `blank()` and the note in the State Pension panel each April.
 - **Monthly payment** carries over the pension total from Take-home pay (yours plus your employer's) and follows it until a figure is typed; emptying the field links it again.

@@ -832,7 +832,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <h3>Year by year</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Pot year by year"><table id="potTbl" style="width:100%"></table></div>
   <h3>How it is worked out</h3>
   <p class="note">Until you retire, the pot grows by the growth rate with the monthly payment added each month. After that it grows with nothing added until drawdown starts. Growth is the rate left after price rises and charges, and the monthly payment is assumed to rise with prices, so every figure is in today's money. 2% is a cautious growth rate. The monthly payment starts as your pension and your employer's from the Take-home calculator, and follows it until you type your own figure. Empty the field to follow it again.</p>
-  <p class="note">Drawdown income is the pot when drawdown starts multiplied by the drawdown rate. That amount is then taken every year, month by month, while the rest of the pot keeps growing. "Pot lasts" is the age at which the pot would run out; "for life" means it would not run out. Income is shown before tax. Drawdown cannot start before the earliest age the government allows: 55, rising to 57 on 6 April 2028.</p>
+  <p class="note">Drawdown income is the pot when drawdown starts multiplied by the drawdown rate. That amount is then taken every year, month by month, while the rest of the pot keeps growing. "Pot lasts" is the age at which the pot would run out; "for life" means it would not run out. Income is shown before tax. Drawdown can start from the earliest age the government allows: 55, rising to 57 on 6 April 2028. It can start before you retire; the monthly payment then carries on until you do. Taking taxable income from a pension can cut the amount you may then pay in each year with tax relief to £10,000.</p>
   <p class="note">This is an estimate, not financial advice. Investments can fall as well as rise. What you enter is kept in this browser only and is never sent anywhere.</p>
 </div></dialog>
 
@@ -991,20 +991,22 @@ function minAccessAge(age,now){
   return Math.max(a,57);
 }
 // The age at which a pot runs out if a fixed share of the starting pot is taken every year. Infinity if it never does.
-function lastsTo(pot,rate,growth,from){
+// `monthly` is still paid in until the age `until`, for someone who starts drawdown before they retire.
+function lastsTo(pot,rate,growth,from,monthly=0,until=from){
   if(!(pot>0)||!(rate>0))return Infinity;
   const i=Math.pow(1+growth/100,1/12)-1,w=pot*rate/100/12;let b=pot;
-  for(let m=1;m<=12*(121-from);m++){b=b*(1+i)-w;if(b<=0)return from+Math.floor(m/12);}
+  for(let m=1;m<=12*(121-from);m++){b=b*(1+i)+(from+(m-1)/12<until?monthly:0)-w;if(b<=0)return from+Math.floor(m/12);}
   return Infinity;
 }
 // Compound growth, worked month by month. Three stages:
 //   saving, until retirement: the pot grows, then the month's payment is added
 //   waiting, from retirement until drawdown starts: the pot grows with nothing added
 //   drawdown: the pot grows, then a twelfth of the yearly income is taken
+// Drawdown can start before retirement, from the earliest age allowed. The payments then carry on until retirement.
 // The yearly growth rate is turned into the monthly rate that compounds to it.
 function potCalc(s,monthly,now=new Date()){
   const age=Math.floor(v(s.ppAge)),ret=Math.max(age,Math.floor(v(s.ppRetire))),minAge=minAccessAge(age,now);
-  const dd=Math.max(ret,minAge,Math.floor(v(s.ppDdAge))),end=Math.min(110,Math.max(95,dd+30));
+  const dd=Math.max(minAge,s.ppDdAge==null?ret:Math.floor(v(s.ppDdAge))),end=Math.min(110,Math.max(95,dd+30));
   const lumpAge=s.lsType==="none"?null:Math.min(dd,Math.max(minAge,s.lsAge==null?dd:Math.floor(v(s.lsAge))));
   const g=v(s.ppGrowth),i=Math.pow(1+g/100,1/12)-1,start=v(s.ppPot),rate=v(s.ppDraw);
   let pot=start,paid=start,paidIn=0,lump=0,lumpMax=0,atDd=0,draw=0;const rows=[];
@@ -1016,14 +1018,14 @@ function potCalc(s,monthly,now=new Date()){
     rows.push({age:a,pot,paid:Math.min(paid,pot),draw:a>dd});
     if(a===end)break;
     if(a===dd){atDd=pot;draw=pot*rate/100;}
-    for(let m=0;m<12;m++)pot=a>=dd?Math.max(0,pot*(1+i)-draw/12):pot*(1+i)+(a<ret?monthly:0);
-    if(a<ret){paid+=monthly*12;paidIn+=monthly*12;}
+    for(let m=0;m<12;m++)pot=Math.max(0,pot*(1+i)+(a<ret?monthly:0)-(a>=dd?draw/12:0));
+    if(a<ret){paid+=monthly*12;if(a<dd)paidIn+=monthly*12;}   // paidIn counts what goes in before drawdown starts
   }
   const sp=s.spOn?v(s.spWeekly)*52:0;
   const rates=[...new Set([3,4,5,6].concat(rate>0?[rate]:[]))].sort((x,y)=>x-y);
-  const table=rates.map(r=>({rate:r,income:atDd*r/100,total:atDd*r/100+sp,lasts:lastsTo(atDd,r,g,dd),own:r===rate}));
+  const table=rates.map(r=>({rate:r,income:atDd*r/100,total:atDd*r/100+sp,lasts:lastsTo(atDd,r,g,dd,monthly,ret),own:r===rate}));
   return {rows,age,ret,dd,end,minAge,lumpAge,lump,lumpMax,pot:atDd,start,paidIn,growth:atDd+lump-start-paidIn,yrs:dd-age,
-    income:draw,sp,spFrom:Math.max(dd,Math.floor(v(s.spAge))),total:draw+sp,lasts:lastsTo(atDd,rate,g,dd),table};
+    income:draw,sp,spFrom:Math.max(dd,Math.floor(v(s.spAge))),total:draw+sp,lasts:lastsTo(atDd,rate,g,dd,monthly,ret),table};
 }
 
 /* ---------- compound interest ---------- */
@@ -1567,7 +1569,7 @@ function updatePot(payC){
   $("pCap").textContent=`Pension pot at ${P.dd}${P.lump>0&&P.lumpAge===P.dd?" after the lump sum":""}, in today's money`;
   $("pPot").textContent=gbp(P.pot);
   $("pSub").textContent=(P.yrs>0?`${P.yrs} year${P.yrs===1?"":"s"} away`:"drawdown starts now")
-    +(P.ret>P.age?` · ${gbp(monthly)} a month ${linked&&FROM_PAY>0?"from your pay":"paid in"}${P.ret<P.dd?" until "+P.ret:""}`:"");
+    +(P.ret>P.age?` · ${gbp(monthly)} a month ${linked&&FROM_PAY>0?"from your pay":"paid in"}${P.ret!==P.dd?" until "+P.ret:""}`:"");
   $("lsBtn").textContent=S.lsType==="none"?"None":`${gbp(P.lump)} at ${P.lumpAge}`;
   $("lumpKv").innerHTML=S.lsType==="none"?"":kv([[`Pot at ${P.lumpAge} before the lump sum`,gbp(P.rows[P.lumpAge-P.age].pot+P.lump)],["Most that can be taken tax free",gbp(P.lumpMax)],
     ["Lump sum taken",gbp(P.lump),1],["Pot left",gbp(P.rows[P.lumpAge-P.age].pot)]]);
@@ -1580,13 +1582,13 @@ function updatePot(payC){
     :`<div><i class="g" style="flex:0 0 ${Math.max(0,r.pot-r.paid)/mx*100}%"></i><i class="p" style="flex:0 0 ${Math.min(r.pot,r.paid)/mx*100}%"></i></div>`).join("");
   $("pAx").innerHTML=`<span>age ${P.age}</span><span>tap a bar · drawdown from ${P.dd}</span><span>${P.end}</span>`;
   paintPot();
-  $("potKv").innerHTML=kv([["Pot today",gbp(P.start)],[`Paid in until ${P.ret}`,gbp(P.paidIn)],[`Growth at ${v(S.ppGrowth)}% a year`,gbp(P.growth)],
+  $("potKv").innerHTML=kv([["Pot today",gbp(P.start)],[`Paid in until ${Math.min(P.ret,P.dd)}`,gbp(P.paidIn)],[`Growth at ${v(S.ppGrowth)}% a year`,gbp(P.growth)],
     P.lump>0?[`Tax-free lump sum at ${P.lumpAge}`,"−"+gbp(P.lump)]:null,[`Pot at ${P.dd}`,gbp(P.pot),1],
     [`Drawdown a year at ${v(S.ppDraw)}%`,gbp(P.income)],S.spOn?[`State Pension a year${later?", from "+P.spFrom:""}`,gbp(P.sp)]:null,
     S.spOn?["Total income a year",gbp(P.total),1]:null,["Total income a month",gbp(P.total/12)],["Pot lasts",lastsText(P.lasts)],
     payC&&payC.typical>0?["Income as a share of today's take-home pay",pc(P.total/12/payC.typical,0)]:null]);
   $("potTbl").innerHTML="<thead><tr><th>Age</th><th>Stage</th><th>Pot</th></tr></thead><tbody>"
-    +P.rows.map(r=>`<tr class="${r.age===P.dd?"key":""}"><td>${r.age}</td><td>${r.draw?"drawdown":r.age<P.ret?"saving":r.age<P.dd?"waiting":"drawdown starts"}</td><td>${gbp(r.pot)}</td></tr>`).join("")+"</tbody>";
+    +P.rows.map(r=>`<tr class="${r.age===P.dd?"key":""}"><td>${r.age}</td><td>${r.draw?(r.age<P.ret?"drawdown, still paying in":"drawdown"):r.age<P.dd?(r.age<P.ret?"saving":"waiting"):"drawdown starts"}</td><td>${gbp(r.pot)}</td></tr>`).join("")+"</tbody>";
 }
 // Each chart shows the figure for one bar: a sensible one to begin with, then whichever is tapped or dragged to.
 function paintBars(el,read,i,text,min,max,now,aria){

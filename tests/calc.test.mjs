@@ -135,6 +135,19 @@ test("drawdown cannot start before the earliest age, and can start after retirin
   near(late.pot, 100000 * 1.05 ** 15, "pot keeps growing between retiring and drawdown");
 });
 
+test("drawdown can start at the earliest age while still working and paying in", () => {
+  const P = pot({ ppAge: 40, ppRetire: 67, ppDdAge: 57, ppPot: 100000, ppGrowth: 0, ppDraw: 5 }, 100);
+  assert.equal(P.dd, 57, "drawdown from 57, ten years before retiring");
+  near(P.pot, 100000 + 100 * 12 * 17, "pot at 57");
+  near(P.income, 120400 * 0.05, "income");
+  // each year until 67 the pot gains 1,200 of payments and loses 6,020 of income
+  near(P.rows[18].pot, 120400 + 1200 - 6020, "pot at 58");
+  near(P.rows[27].pot, 120400 + 10 * (1200 - 6020), "pot at 67");
+  near(P.rows[28].pot, 120400 + 10 * (1200 - 6020) - 6020, "pot at 68, payments stopped");
+  const asked50 = pot({ ppAge: 40, ppRetire: 67, ppDdAge: 50, ppPot: 100000, ppGrowth: 0 }, 0);
+  assert.equal(asked50.dd, 57, "an age below the earliest allowed is moved up to it");
+});
+
 test("the pot falls by the yearly income in drawdown and runs out when expected", () => {
   // no growth and 5% a year: the pot loses 5,000 a year and lasts 20 years
   const P = pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppGrowth: 0, ppDraw: 5 }, 0);
