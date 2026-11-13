@@ -1,7 +1,7 @@
 // Keeps a copy of the app's own files so it opens quickly and works with no signal.
 // It only handles requests for this site's files. The figures a user enters are kept separately, by the page itself.
 // The network is tried first, so a new version is picked up as soon as the phone is online.
-const CACHE = "jr1-money-v5";
+const CACHE = "jr1-money-v6";
 const FILES = ["./", "favicon.svg", "site.webmanifest", "icons/icon-192.png",
   "fonts/ibm-plex-sans-latin-400-normal.woff2", "fonts/ibm-plex-sans-latin-500-normal.woff2",
   "fonts/ibm-plex-sans-latin-600-normal.woff2", "fonts/ibm-plex-sans-latin-700-normal.woff2",
