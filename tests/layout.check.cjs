@@ -32,8 +32,8 @@ const STATES = {
   potEmpty: async (p) => { await go(p, "pension"); },
   potFull: async (p) => {
     await go(p, "take-home"); await p.fill("#salary", "118000"); await p.click("#back"); await go(p, "pension");
-    await p.fill("#ppAge", "24"); await p.fill("#ppRetire", "60"); await p.fill("#ppPot", "1250000"); await p.fill("#ppMonthly", "2500");
-    await p.fill("#ppDraw", "4.5"); await p.fill("#ppDdAge", "62"); await p.click("#ppAge");
+    await p.fill("#ppAge", "24"); await p.fill("#ppRetire", "60"); await p.fill("#ppPot", "1250000"); await p.fill("#ppMonthly", "8000");
+    await p.fill("#ppDraw", "4.5"); await p.fill("#ppDdAge", "58"); await p.click("#ppAge");   // over both tax relief limits, so both warnings show
     await p.click('[data-open="shLump"]'); await p.click("#lsMax"); await p.click("#shLump .done");
     await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
   },

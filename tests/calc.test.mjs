@@ -8,8 +8,8 @@ import vm from "node:vm";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const code = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const ctx = vm.createContext({});
-vm.runInContext(code + "\n;globalThis.api={blank,compute,potCalc,ciCalc,minAccessAge,lastsTo,mortgageCalc,loanCalc,debtCalc,goalCalc,stampDuty,soleCalc,directorCalc,cgtCalc,ihtCalc};", ctx);
-const { blank, compute, potCalc, ciCalc, minAccessAge, lastsTo, mortgageCalc, loanCalc, debtCalc, goalCalc, stampDuty, soleCalc, directorCalc, cgtCalc, ihtCalc } = ctx.api;
+vm.runInContext(code + "\n;globalThis.api={blank,compute,potCalc,ciCalc,minAccessAge,lastsTo,mortgageCalc,loanCalc,debtCalc,goalCalc,stampDuty,soleCalc,directorCalc,cgtCalc,ihtCalc,annualAllowance,pensionLimits};", ctx);
+const { blank, compute, potCalc, ciCalc, minAccessAge, lastsTo, mortgageCalc, loanCalc, debtCalc, goalCalc, stampDuty, soleCalc, directorCalc, cgtCalc, ihtCalc, annualAllowance, pensionLimits } = ctx.api;
 const calc = (o) => compute(Object.assign(blank(), o));
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg}: got ${a}, expected ${b}`);
 
@@ -133,6 +133,54 @@ test("drawdown cannot start before the earliest age, and can start after retirin
   const late = pot({ ppAge: 50, ppRetire: 60, ppDdAge: 65, ppPot: 100000, ppGrowth: 5 }, 0);
   assert.equal(late.dd, 65);
   near(late.pot, 100000 * 1.05 ** 15, "pot keeps growing between retiring and drawdown");
+});
+
+test("drawdown can start at the earliest age while still working and paying in", () => {
+  const P = pot({ ppAge: 40, ppRetire: 67, ppDdAge: 57, ppPot: 100000, ppGrowth: 0, ppDraw: 5 }, 100);
+  assert.equal(P.dd, 57, "drawdown from 57, ten years before retiring");
+  near(P.pot, 100000 + 100 * 12 * 17, "pot at 57");
+  near(P.income, 120400 * 0.05, "income");
+  // each year until 67 the pot gains 1,200 of payments and loses 6,020 of income
+  near(P.rows[18].pot, 120400 + 1200 - 6020, "pot at 58");
+  near(P.rows[27].pot, 120400 + 10 * (1200 - 6020), "pot at 67");
+  near(P.rows[28].pot, 120400 + 10 * (1200 - 6020) - 6020, "pot at 68, payments stopped");
+  const asked50 = pot({ ppAge: 40, ppRetire: 67, ppDdAge: 50, ppPot: 100000, ppGrowth: 0 }, 0);
+  assert.equal(asked50.dd, 57, "an age below the earliest allowed is moved up to it");
+});
+
+test("the annual allowance is £60,000 and tapers for high incomes", () => {
+  assert.equal(annualAllowance(150000, 150000), 60000, "ordinary income");
+  assert.equal(annualAllowance(250000, 300000), 60000 - 20000, "£40,000 over £260,000 takes £20,000 off");
+  assert.equal(annualAllowance(300000, 400000), 10000, "never below £10,000");
+  assert.equal(annualAllowance(190000, 300000), 60000, "no taper when threshold income is £200,000 or less");
+});
+
+test("pension limits worked out from a Take-home result", () => {
+  // £300,000 salary, 5% by salary sacrifice and 3% from the employer: adjusted income is 309,000
+  const L = pensionLimits(Object.assign(blank(), { salary: 300000 }), calc({ salary: 300000, eePct: 5, erPct: 3 }));
+  near(L.allow, 60000 - (309000 - 260000) / 2, "tapered allowance");
+  near(L.paidIn, 15000 + 9000, "paid in");
+  near(L.pay, 300000 + 9000, "relief stops at pay plus the employer's payments");
+});
+
+test("payments into the pot are held at the annual allowance", () => {
+  const P = pot({ ppAge: 50, ppRetire: 60, ppPot: 0, ppGrowth: 0 }, 10000);
+  near(P.pot, 60000 * 10, "£120,000 a year is held at £60,000");
+  assert.equal(P.cutAA, true);
+  assert.equal(pot({ ppAge: 50, ppRetire: 60, ppPot: 0, ppGrowth: 0 }, 4000).cutAA, false, "£48,000 a year is within it");
+  const low = potCalc(Object.assign(blank(), { ppAge: 50, ppRetire: 60, ppPot: 0, ppGrowth: 0 }), 4000, NOW, 30000);
+  near(low.pot, 30000 * 10, "a lower allowance, as for a high income, is applied too");
+});
+
+test("once income is taken, payments are held at £10,000 a year", () => {
+  const P = pot({ ppAge: 57, ppRetire: 67, ppDdAge: 57, ppPot: 100000, ppGrowth: 0, ppDraw: 5 }, 2000);
+  assert.equal(P.cutMP, true);
+  near(P.rows[1].pot, 100000 + 10000 - 5000, "£24,000 a year is held at £10,000 while £5,000 is drawn");
+  const none = pot({ ppAge: 57, ppRetire: 67, ppDdAge: 57, ppPot: 100000, ppGrowth: 0, ppDraw: 0 }, 2000);
+  assert.equal(none.cutMP, false, "no income taken, so the limit does not apply");
+  near(none.rows[1].pot, 100000 + 24000, "full payments carry on");
+  const lumpOnly = pot({ ppAge: 57, ppRetire: 67, ppDdAge: 67, ppPot: 100000, ppGrowth: 0, lsType: "max", lsAge: 57 }, 2000);
+  near(lumpOnly.rows[1].pot, 75000 + 24000, "a tax-free lump sum alone does not bring in the limit");
 });
 
 test("the pot falls by the yearly income in drawdown and runs out when expected", () => {

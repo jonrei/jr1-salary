@@ -172,6 +172,7 @@ button.ddrow{cursor:pointer}
 .stepper.over input{letter-spacing:-.03em}
 .sel.carried{border:1.5px dashed var(--accent)}
 .lk{margin-top:.35rem}
+.warnline{margin-top:.35rem;color:var(--warn)}
 .readout{display:flex;align-items:center;justify-content:center;height:2.6rem;border:1px solid var(--line);border-radius:.55rem;font-family:var(--num);font-size:var(--field);font-weight:600;color:var(--muted)}
 .readout.warn{color:var(--warn);border-color:var(--warn)}
 /* calculators with a table and no chart sit at the top of the screen */
@@ -367,6 +368,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
       <div><span class="lbl" id="lsLbl">Tax-free lump sum</span><button type="button" class="pickbtn" id="lsBtn" data-open="shLump" aria-haspopup="dialog" aria-describedby="lsLbl">None</button></div>
     </div>
     <div class="cap lk" hidden></div>
+    <div class="cap warnline" id="pWarn" hidden></div>
   </section>
 
   <section class="box" aria-label="Drawdown income">
@@ -804,7 +806,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <h3>Tax efficiency</h3><dl class="kv" id="effKv"></dl>
   <h3>Month by month</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Month by month table, scrolls sideways"><table id="tbl"></table></div>
   <h3>Rates used</h3><p class="note" id="ratesNote"></p>
-  <p class="note"><span id="yearNote"></span> Tax is worked out month by month on the cumulative basis payroll uses. The allowance is reduced when income is over £100,000. Higher-rate relief on after-tax pension contributions, which you claim from HMRC yourself, is not included. This is an estimate, not financial or tax advice. What you enter is kept in this browser only and is never sent anywhere.</p>
+  <p class="note"><span id="yearNote"></span> Tax is worked out month by month on the cumulative basis payroll uses. The allowance is reduced when income is over £100,000. Higher-rate relief on after-tax pension contributions, which you claim from HMRC yourself, is not included. Pension payments get tax relief up to the annual allowance: £60,000 a year including your employer's payments, falling for incomes over £260,000 to as little as £10,000. This is an estimate, not financial or tax advice. What you enter is kept in this browser only and is never sent anywhere.</p>
 </div></dialog>
 
 <dialog class="sheet" id="shSP" aria-labelledby="shSPT"><header><h2 id="shSPT">State Pension</h2><button type="button" class="done">Done</button></header><div class="body">
@@ -832,7 +834,8 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <h3>Year by year</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Pot year by year"><table id="potTbl" style="width:100%"></table></div>
   <h3>How it is worked out</h3>
   <p class="note">Until you retire, the pot grows by the growth rate with the monthly payment added each month. After that it grows with nothing added until drawdown starts. Growth is the rate left after price rises and charges, and the monthly payment is assumed to rise with prices, so every figure is in today's money. 2% is a cautious growth rate. The monthly payment starts as your pension and your employer's from the Take-home calculator, and follows it until you type your own figure. Empty the field to follow it again.</p>
-  <p class="note">Drawdown income is the pot when drawdown starts multiplied by the drawdown rate. That amount is then taken every year, month by month, while the rest of the pot keeps growing. "Pot lasts" is the age at which the pot would run out; "for life" means it would not run out. Income is shown before tax. Drawdown cannot start before the earliest age the government allows: 55, rising to 57 on 6 April 2028.</p>
+  <p class="note">Drawdown income is the pot when drawdown starts multiplied by the drawdown rate. That amount is then taken every year, month by month, while the rest of the pot keeps growing. "Pot lasts" is the age at which the pot would run out; "for life" means it would not run out. Income is shown before tax. Drawdown can start from the earliest age the government allows: 55, rising to 57 on 6 April 2028. It can start before you retire; the monthly payment then carries on until you do. </p>
+  <p class="note">Tax relief limits are applied. Payments are held at the annual allowance of £60,000 a year, which counts your employer's payments too. With a salary entered in Take-home pay, the allowance falls for incomes over £260,000, down to £10,000, and payments cannot be more than your pay plus what your employer adds. Once drawdown income is taken, payments are held at £10,000 a year. Taking only the tax-free lump sum does not bring in that limit. Unused allowance from the last three years, which can cover a one-off larger payment, is not included.</p>
   <p class="note">This is an estimate, not financial advice. Investments can fall as well as rise. What you enter is kept in this browser only and is never sent anywhere.</p>
 </div></dialog>
 
@@ -991,22 +994,38 @@ function minAccessAge(age,now){
   return Math.max(a,57);
 }
 // The age at which a pot runs out if a fixed share of the starting pot is taken every year. Infinity if it never does.
-function lastsTo(pot,rate,growth,from){
+// `monthly` is still paid in until the age `until`, for someone who starts drawdown before they retire.
+function lastsTo(pot,rate,growth,from,monthly=0,until=from){
   if(!(pot>0)||!(rate>0))return Infinity;
   const i=Math.pow(1+growth/100,1/12)-1,w=pot*rate/100/12;let b=pot;
-  for(let m=1;m<=12*(121-from);m++){b=b*(1+i)-w;if(b<=0)return from+Math.floor(m/12);}
+  for(let m=1;m<=12*(121-from);m++){b=b*(1+i)+(from+(m-1)/12<until?monthly:0)-w;if(b<=0)return from+Math.floor(m/12);}
   return Infinity;
+}
+// ---- limits on pension tax relief ----
+const AA=60000;     // annual allowance: the most that can go into pensions in a year with tax relief, employer payments included
+const MPAA=10000;   // money purchase annual allowance: the limit once taxable income has been taken from a pension
+// The annual allowance shrinks for high incomes: by £1 for every £2 of adjusted income over £260,000, down to £10,000,
+// but only when threshold income is also over £200,000.
+const annualAllowance=(threshold,adjusted)=>threshold>200000&&adjusted>260000?Math.max(10000,AA-(adjusted-260000)/2):AA;
+// The limits for a Take-home result. Threshold income is pay less the user's own pension payments (salary sacrifice is not taken off).
+// Adjusted income is pay plus what the employer pays in. Relief also stops at the year's pay plus the employer's payments.
+function pensionLimits(s,C){
+  const R=C.R,base=C.gross-R.sum("sch")+v(s.bik)*12,emp=R.sum("emp"),own=s.method==="sacrifice"?0:R.sum("pen");
+  return {allow:annualAllowance(base-own,base+emp),pay:C.gross-R.sum("sch")+emp,paidIn:R.sum("pen")+R.sum("bsac")+emp};
 }
 // Compound growth, worked month by month. Three stages:
 //   saving, until retirement: the pot grows, then the month's payment is added
 //   waiting, from retirement until drawdown starts: the pot grows with nothing added
 //   drawdown: the pot grows, then a twelfth of the yearly income is taken
+// Drawdown can start before retirement, from the earliest age allowed. The payments then carry on until retirement.
+// Payments are held at `limit` a year (the annual allowance or less), and at £10,000 a year once income is being taken.
 // The yearly growth rate is turned into the monthly rate that compounds to it.
-function potCalc(s,monthly,now=new Date()){
+function potCalc(s,monthly,now=new Date(),limit=AA){
   const age=Math.floor(v(s.ppAge)),ret=Math.max(age,Math.floor(v(s.ppRetire))),minAge=minAccessAge(age,now);
-  const dd=Math.max(ret,minAge,Math.floor(v(s.ppDdAge))),end=Math.min(110,Math.max(95,dd+30));
+  const dd=Math.max(minAge,s.ppDdAge==null?ret:Math.floor(v(s.ppDdAge))),end=Math.min(110,Math.max(95,dd+30));
   const lumpAge=s.lsType==="none"?null:Math.min(dd,Math.max(minAge,s.lsAge==null?dd:Math.floor(v(s.lsAge))));
   const g=v(s.ppGrowth),i=Math.pow(1+g/100,1/12)-1,start=v(s.ppPot),rate=v(s.ppDraw);
+  const payFull=Math.min(Math.max(0,monthly),limit/12),payAfter=rate>0?Math.min(payFull,MPAA/12):payFull;   // paid in a month before and after income is first taken
   let pot=start,paid=start,paidIn=0,lump=0,lumpMax=0,atDd=0,draw=0;const rows=[];
   for(let a=age;a<=end;a++){
     if(a===lumpAge){   // tax-free cash: up to a quarter of the pot, capped at the Lump Sum Allowance
@@ -1016,14 +1035,16 @@ function potCalc(s,monthly,now=new Date()){
     rows.push({age:a,pot,paid:Math.min(paid,pot),draw:a>dd});
     if(a===end)break;
     if(a===dd){atDd=pot;draw=pot*rate/100;}
-    for(let m=0;m<12;m++)pot=a>=dd?Math.max(0,pot*(1+i)-draw/12):pot*(1+i)+(a<ret?monthly:0);
-    if(a<ret){paid+=monthly*12;paidIn+=monthly*12;}
+    const pay=a>=ret?0:a>=dd?payAfter:payFull;
+    for(let m=0;m<12;m++)pot=Math.max(0,pot*(1+i)+pay-(a>=dd?draw/12:0));
+    if(a<ret){paid+=pay*12;if(a<dd)paidIn+=pay*12;}   // paidIn counts what goes in before drawdown starts
   }
   const sp=s.spOn?v(s.spWeekly)*52:0;
   const rates=[...new Set([3,4,5,6].concat(rate>0?[rate]:[]))].sort((x,y)=>x-y);
-  const table=rates.map(r=>({rate:r,income:atDd*r/100,total:atDd*r/100+sp,lasts:lastsTo(atDd,r,g,dd),own:r===rate}));
+  const table=rates.map(r=>({rate:r,income:atDd*r/100,total:atDd*r/100+sp,lasts:lastsTo(atDd,r,g,dd,Math.min(payFull,MPAA/12),ret),own:r===rate}));
   return {rows,age,ret,dd,end,minAge,lumpAge,lump,lumpMax,pot:atDd,start,paidIn,growth:atDd+lump-start-paidIn,yrs:dd-age,
-    income:draw,sp,spFrom:Math.max(dd,Math.floor(v(s.spAge))),total:draw+sp,lasts:lastsTo(atDd,rate,g,dd),table};
+    income:draw,sp,spFrom:Math.max(dd,Math.floor(v(s.spAge))),total:draw+sp,lasts:lastsTo(atDd,rate,g,dd,payAfter,ret),table,
+    limit,payFull,payAfter,cutAA:monthly>payFull+.005,cutMP:dd<ret&&payAfter<payFull-.005};
 }
 
 /* ---------- compound interest ---------- */
@@ -1557,17 +1578,24 @@ function updatePot(payC){
   if(!(v(S.ppAge)>0)){
     POT=null;$("pCap").textContent="Pension pot when drawdown starts, in today's money";$("pPot").textContent="—";
     $("pSub").textContent="Enter your age to see the forecast";$("pRead").textContent="Pot by age";$("ddCap").textContent="";
-    $("lsBtn").textContent=S.lsType==="none"?"None":"Enter your age";
+    $("lsBtn").textContent=S.lsType==="none"?"None":"Enter your age";$("pWarn").hidden=true;
     ["ddTbl","pBars","pAx","potKv","potTbl","lumpKv"].forEach(id=>$(id).innerHTML="");carry("ppDdAge",null);carry("lsAge",null);
     return;
   }
-  const P=POT=potCalc(S,monthly),later=P.spFrom>P.dd;
+  // tax relief limits: the annual allowance (lower for high incomes) and, where a salary has been entered, no more than the year's pay
+  const lim=payC?pensionLimits(S,payC):null,limit=lim?Math.min(lim.allow,lim.pay):AA;
+  const P=POT=potCalc(S,monthly,undefined,limit),later=P.spFrom>P.dd;
+  const warn=[],why=lim&&lim.pay<lim.allow?"tax relief stops at your pay":"the tax relief limit"+(limit<AA?" at your income":"");
+  if(P.cutAA&&P.cutMP)warn.push(`Paid in held at ${gbp(limit)} a year, then ${gbp(MPAA)} from ${P.dd}: tax relief limits.`);
+  else if(P.cutAA)warn.push(`Paid in held at ${gbp(limit)} a year: ${why}.`);
+  else if(P.cutMP)warn.push(`From ${P.dd} paid in is held at ${gbp(MPAA)} a year, the limit once income is taken.`);
+  $("pWarn").hidden=!warn.length;$("pWarn").textContent=warn.join(" ");
   carry("ppDdAge",P.dd);settle("ppDdAge",P.dd);
   if(P.lumpAge!=null){carry("lsAge",P.lumpAge);settle("lsAge",P.lumpAge);}
   $("pCap").textContent=`Pension pot at ${P.dd}${P.lump>0&&P.lumpAge===P.dd?" after the lump sum":""}, in today's money`;
   $("pPot").textContent=gbp(P.pot);
   $("pSub").textContent=(P.yrs>0?`${P.yrs} year${P.yrs===1?"":"s"} away`:"drawdown starts now")
-    +(P.ret>P.age?` · ${gbp(monthly)} a month ${linked&&FROM_PAY>0?"from your pay":"paid in"}${P.ret<P.dd?" until "+P.ret:""}`:"");
+    +(P.ret>P.age?` · ${gbp(P.payFull)} a month ${linked&&FROM_PAY>0&&!P.cutAA?"from your pay":"paid in"}${P.ret!==P.dd?" until "+P.ret:""}`:"");
   $("lsBtn").textContent=S.lsType==="none"?"None":`${gbp(P.lump)} at ${P.lumpAge}`;
   $("lumpKv").innerHTML=S.lsType==="none"?"":kv([[`Pot at ${P.lumpAge} before the lump sum`,gbp(P.rows[P.lumpAge-P.age].pot+P.lump)],["Most that can be taken tax free",gbp(P.lumpMax)],
     ["Lump sum taken",gbp(P.lump),1],["Pot left",gbp(P.rows[P.lumpAge-P.age].pot)]]);
@@ -1580,13 +1608,14 @@ function updatePot(payC){
     :`<div><i class="g" style="flex:0 0 ${Math.max(0,r.pot-r.paid)/mx*100}%"></i><i class="p" style="flex:0 0 ${Math.min(r.pot,r.paid)/mx*100}%"></i></div>`).join("");
   $("pAx").innerHTML=`<span>age ${P.age}</span><span>tap a bar · drawdown from ${P.dd}</span><span>${P.end}</span>`;
   paintPot();
-  $("potKv").innerHTML=kv([["Pot today",gbp(P.start)],[`Paid in until ${P.ret}`,gbp(P.paidIn)],[`Growth at ${v(S.ppGrowth)}% a year`,gbp(P.growth)],
+  $("potKv").innerHTML=kv([["Pot today",gbp(P.start)],[`Paid in until ${Math.min(P.ret,P.dd)}`,gbp(P.paidIn)],[`Growth at ${v(S.ppGrowth)}% a year`,gbp(P.growth)],
+    [`Most that can be paid in a year with tax relief${P.cutMP?", then "+gbp(MPAA)+" from "+P.dd:""}`,gbp(P.limit)],
     P.lump>0?[`Tax-free lump sum at ${P.lumpAge}`,"−"+gbp(P.lump)]:null,[`Pot at ${P.dd}`,gbp(P.pot),1],
     [`Drawdown a year at ${v(S.ppDraw)}%`,gbp(P.income)],S.spOn?[`State Pension a year${later?", from "+P.spFrom:""}`,gbp(P.sp)]:null,
     S.spOn?["Total income a year",gbp(P.total),1]:null,["Total income a month",gbp(P.total/12)],["Pot lasts",lastsText(P.lasts)],
     payC&&payC.typical>0?["Income as a share of today's take-home pay",pc(P.total/12/payC.typical,0)]:null]);
   $("potTbl").innerHTML="<thead><tr><th>Age</th><th>Stage</th><th>Pot</th></tr></thead><tbody>"
-    +P.rows.map(r=>`<tr class="${r.age===P.dd?"key":""}"><td>${r.age}</td><td>${r.draw?"drawdown":r.age<P.ret?"saving":r.age<P.dd?"waiting":"drawdown starts"}</td><td>${gbp(r.pot)}</td></tr>`).join("")+"</tbody>";
+    +P.rows.map(r=>`<tr class="${r.age===P.dd?"key":""}"><td>${r.age}</td><td>${r.draw?(r.age<P.ret?"drawdown, still paying in":"drawdown"):r.age<P.dd?(r.age<P.ret?"saving":"waiting"):"drawdown starts"}</td><td>${gbp(r.pot)}</td></tr>`).join("")+"</tbody>";
 }
 // Each chart shows the figure for one bar: a sensible one to begin with, then whichever is tapped or dragged to.
 function paintBars(el,read,i,text,min,max,now,aria){
@@ -1730,13 +1759,16 @@ function updatePay(){
   const st=$("status");st.textContent=C.bsol.msg||"";st.className="status"+(C.bsol.warn?" warn":"");
   $("bonusKv").innerHTML=R.bg?kv([["Bonus before deductions",gbp(R.bg,2)],R.bs?["Into pension",gbp(R.bs,2)]:null,["Tax, NI and other deductions on it",gbp(R.bg-R.bs-C.bonusNet,2)],["Bonus take-home",gbp(C.bonusNet,2),1],["Share of the bonus kept",pc(C.bonusNet/R.bg)]]):"";
   $("bonusNote").textContent=R.bg?"Take-home is the extra pay over the year compared with having no bonus. The main screen shows a normal month without it; the Detail table shows it in the last month of the tax year.":"Enter a bonus as an amount or as a % of salary to see what it pays after deductions.";
+  // pension tax relief: anything paid in above the annual allowance loses its relief through a charge on a tax return
+  const PL=pensionLimits(S,C),aaOver=Math.max(0,penAll-PL.allow),aaCharge=aaOver>0?annualTax(R.ani+aaOver)-annualTax(R.ani):0;
   $("penKv").innerHTML=kv([
     [`Your contributions from salary (${C.pct.toFixed(1)}%)`,gbp(eePen)],
     bsac?["From your bonus",gbp(bsac)]:null,
     [`Employer contributions (${v(S.erPct).toFixed(1)}%)`,gbp(emp)],
-    ["Total into pension",gbp(penAll),1],["Total as a share of salary",pc(penAll/sal)],["Average a month",gbp(penAll/12)]]);
+    ["Total into pension",gbp(penAll),1],["Total as a share of salary",pc(penAll/sal)],["Average a month",gbp(penAll/12)],
+    ["Annual allowance for tax relief",gbp(PL.allow)],aaOver>0?["Over the allowance",gbp(aaOver)]:null,aaOver>0?["Tax relief to pay back, about",gbp(aaCharge)]:null]);
   $("penNote").textContent=(S.method==="ras"?`Your contributions include ${gbp(eePen*.2)} of basic-rate tax relief added by the pension provider; ${gbp(eePen*.8)} comes out of your take-home. `:"")
-    +(penAll>60000?"This is over the £60,000 pension annual allowance, so a tax charge may apply. ":"")+"Percentages are of basic salary.";
+    +(aaOver>0?`This is ${gbp(aaOver)} over your annual allowance of ${gbp(PL.allow)}. `:"")+"Percentages are of basic salary.";
   $("effKv").innerHTML=kv([
     ["Income tax",gbp(tax)],["National Insurance",gbp(ni)],loan?["Student loan",gbp(loan)]:null,
     ["Tax and NI as a share of gross pay",pc((tax+ni)/C.gross)],
@@ -1750,6 +1782,7 @@ function updatePay(){
   if(C.bsol.warn)notes.push(["warn",C.bsol.msg]);
   if(R.ani>100000)notes.push(["warn",`Income is over £100,000, so the tax-free allowance is cut to ${gbp(R.allow)}. Between £100,000 and £125,140 each extra £1 is taxed very heavily; ${gbp(R.ani-100000)} more into pension would restore the full allowance.`]);
   if(R.cb&&R.charge>0)notes.push(["warn",`Income is over £60,000, so ${Math.round(R.cbPct*100)}% of Child Benefit (${gbp(R.charge)}) is repaid. ${gbp(R.ani-60000)} more into pension or salary sacrifice would clear the charge.`]);
+  if(aaOver>0)notes.push(["warn",`${gbp(penAll)} into your pension is ${gbp(aaOver)} over your annual allowance of ${gbp(PL.allow)}${PL.allow<AA?", which is lower because of your income":""}. Tax relief on the extra, about ${gbp(aaCharge)}, is paid back through a tax return unless unused allowance from the last three years covers it.`]);
   if(R.rows.some(r=>r.cash<=0&&r.basic>0))notes.push(["warn","In at least one month the deductions use up all of your pay. Check the amounts entered."]);
   if(S.method!=="sacrifice"&&eePen>0)notes.push(["ok","Your pension is not taken by salary sacrifice, so you pay NI on that money. Salary sacrifice, where offered, usually leaves more take-home."]);
   if(R.cb&&R.charge===0)notes.push(["ok","Income is at or under £60,000, so no Child Benefit is repaid."]);
