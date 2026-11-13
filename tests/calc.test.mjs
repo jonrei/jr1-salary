@@ -8,8 +8,8 @@ import vm from "node:vm";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const code = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const ctx = vm.createContext({});
-vm.runInContext(code + "\n;globalThis.api={blank,compute,potCalc,ciCalc,minAccessAge,lastsTo,mortgageCalc,loanCalc,debtCalc,goalCalc,stampDuty,soleCalc,directorCalc,cgtCalc,ihtCalc,annualAllowance,pensionLimits};", ctx);
-const { blank, compute, potCalc, ciCalc, minAccessAge, lastsTo, mortgageCalc, loanCalc, debtCalc, goalCalc, stampDuty, soleCalc, directorCalc, cgtCalc, ihtCalc, annualAllowance, pensionLimits } = ctx.api;
+vm.runInContext(code + "\n;globalThis.api={blank,compute,potCalc,ciCalc,minAccessAge,lastsTo,mortgageCalc,loanCalc,debtCalc,goalCalc,stampDuty,soleCalc,directorCalc,cgtCalc,ihtCalc,annualAllowance,pensionLimits,drawdownYears,pensionIncomeTax};", ctx);
+const { blank, compute, potCalc, ciCalc, minAccessAge, lastsTo, mortgageCalc, loanCalc, debtCalc, goalCalc, stampDuty, soleCalc, directorCalc, cgtCalc, ihtCalc, annualAllowance, pensionLimits, drawdownYears, pensionIncomeTax } = ctx.api;
 const calc = (o) => compute(Object.assign(blank(), o));
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg}: got ${a}, expected ${b}`);
 
@@ -181,6 +181,56 @@ test("once income is taken, payments are held at £10,000 a year", () => {
   near(none.rows[1].pot, 100000 + 24000, "full payments carry on");
   const lumpOnly = pot({ ppAge: 57, ppRetire: 67, ppDdAge: 67, ppPot: 100000, ppGrowth: 0, lsType: "max", lsAge: 57 }, 2000);
   near(lumpOnly.rows[1].pot, 75000 + 24000, "a tax-free lump sum alone does not bring in the limit");
+});
+
+test("the drawdown table always has four rows, half a point apart, around the chosen rate", () => {
+  const rates = (r) => Array.from(pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppDraw: r }, 0).table, (t) => t.rate);
+  assert.deepEqual(rates(7), [6.5, 7, 7.5, 8], "the chosen rate is the second row");
+  assert.deepEqual(rates(4.5), [4, 4.5, 5, 5.5]);
+  assert.deepEqual(rates(12), [11.5, 12, 12.5, 13], "it keeps moving as the rate rises");
+  assert.deepEqual(rates(0.5), [0.5, 1, 1.5, 2], "it never starts below 0.5%");
+  assert.deepEqual(rates(0), [3, 3.5, 4, 4.5], "with no rate chosen it shows the usual range");
+  const T = pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppDraw: 7 }, 0).table;
+  assert.deepEqual(Array.from(T, (t) => t.own), [false, true, false, false], "only the chosen rate is marked");
+});
+
+test("income year by year steps up when the State Pension starts, and falls when the pot runs out", () => {
+  // £100,000 with no growth at 5% pays £5,000 a year for 20 years; £12,000 of State Pension starts at 67
+  const Y = drawdownYears(100000, 5, 0, 60, 95, 0, 60, 12000, 67);
+  assert.equal(Y.length, 35);
+  near(Y[0].total, 5000, "age 60: the pot only");
+  near(Y[6].total, 5000, "age 66: still the pot only");
+  near(Y[7].sp, 12000, "age 67: State Pension starts");
+  near(Y[7].total, 17000, "age 67: the total steps up");
+  near(Y[7].left, 100000 - 8 * 5000, "pot left after eight years");
+  near(Y[19].fromPot, 5000, "age 79: the last full year from the pot");
+  near(Y[19].left, 0, "age 79: the pot is empty");
+  near(Y[20].fromPot, 0, "age 80: nothing left to take");
+  near(Y[20].total, 12000, "age 80: State Pension only");
+  // matches the pot shown on the chart for the same inputs
+  const P = pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppGrowth: 0, ppDraw: 5 }, 0);
+  near(P.rows[10].pot, Y[9].left, "the same balance as the chart ten years in");
+});
+
+test("pension income is taxed as income, with a quarter of each withdrawal tax free if no lump sum was taken", () => {
+  const eng = blank(), tax = (x) => pensionIncomeTax(x, eng);
+  near(tax(12570), 0, "nothing under the allowance");
+  near(tax(17000), (17000 - 12570) * 0.2, "basic rate above it");
+  near(tax(60000), 37700 * 0.2 + (60000 - 50270) * 0.4, "higher rate above £50,270");
+  // the most allowed was taken as a lump sum, so everything from the pot is taxed
+  const all = drawdownYears(100000, 5, 0, 60, 95, 0, 60, 12000, 67, 0, 0, tax);
+  near(all[0].tax, 0, "age 60: £5,000 is under the allowance");
+  near(all[7].tax, (17000 - 12570) * 0.2, "age 67: £5,000 from the pot and £12,000 State Pension");
+  near(all[7].net, 17000 - 886, "age 67: after tax");
+  // no lump sum: a quarter of the £5,000 is tax free, so £3,750 and the State Pension are taxed
+  const quarter = drawdownYears(100000, 5, 0, 60, 95, 0, 60, 12000, 67, 0.25, 268275, tax);
+  near(quarter[7].free, 1250, "tax-free part");
+  near(quarter[7].tax, (3750 + 12000 - 12570) * 0.2, "tax on the rest");
+  // the tax-free part stops once the limit on tax-free cash is used up
+  const capped = drawdownYears(100000, 5, 0, 60, 95, 0, 60, 0, 67, 0.25, 2000, tax);
+  near(capped[0].free, 1250, "first year");
+  near(capped[1].free, 750, "second year uses what is left of the limit");
+  near(capped[2].free, 0, "then none");
 });
 
 test("the pot falls by the yearly income in drawdown and runs out when expected", () => {

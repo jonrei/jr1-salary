@@ -141,6 +141,7 @@ label.warn{color:var(--warn)}
 .inc em{font-style:normal;color:var(--muted);font-size:.85rem;text-align:right}
 .inc .tot{border-top:1px solid var(--line);padding-top:.2rem;font-weight:700}
 .potbox{flex:1 1 6rem;min-height:6rem;display:flex;flex-direction:column}
+#scPot .potbox{flex-basis:5rem;min-height:5rem}   /* the pension screen has the most on it, so its chart gives up a little more */
 .pbars{flex:1 1 auto;min-height:0;display:flex;align-items:flex-end;gap:1px;margin-top:.45rem;border-bottom:1px solid var(--line);cursor:pointer;touch-action:none;border-radius:.2rem}
 .pbars div{opacity:.5}
 .pbars div.on{opacity:1}
@@ -245,6 +246,12 @@ th,td{padding:.35rem .6rem;border-bottom:1px solid var(--line);text-align:right}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
 thead th{color:var(--muted);font-weight:600}
 tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
+tr.mark td,tr.mark td:first-child{text-align:left;background:var(--warn-soft);color:var(--warn);font-weight:600;white-space:normal}
+tr.mark.up td,tr.mark.up td:first-child{background:var(--accent-soft);color:var(--good)}
+/* the year-by-year income table has five columns, so it is set a little tighter to fit a phone without scrolling sideways */
+#ddYears th,#ddYears td{padding:.35rem .3rem}
+#ddYears{font-size:max(.85rem,11px)}
+#ddYears thead th{white-space:normal;vertical-align:bottom;line-height:1.15}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -829,12 +836,20 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
   <p class="note">Taking more than the tax-free amount is possible but is taxed as income, and is not covered here.</p>
 </div></dialog>
 
+<dialog class="sheet" id="shDd" aria-labelledby="ddT"><header><h2 id="ddT">Drawdown year by year</h2><button type="button" class="done">Done</button></header><div class="body">
+  <dl class="kv" id="ddKv" style="margin-top:0"></dl>
+  <div class="row" style="margin-top:.8rem"><button type="button" class="btn" id="ddUse" hidden></button></div>
+  <h3>Income each year</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Income each year"><table id="ddYears" style="width:100%"></table></div>
+  <p class="note">Each row is a year of your age. "From pot" is the same amount every year, in today's money, until the pot runs out. The State Pension is added from the age it starts, so the income steps up in that year. "After tax" is what is left of the two together.</p>
+  <p class="note" id="ddTaxNote"></p>
+</div></dialog>
+
 <dialog class="sheet" id="shPot" aria-labelledby="shPotT"><header><h2 id="shPotT">Pension pot detail</h2><button type="button" class="done">Done</button></header><div class="body">
   <dl class="kv" id="potKv" style="margin-top:0"></dl>
   <h3>Year by year</h3><div class="tablewrap" tabindex="0" role="region" aria-label="Pot year by year"><table id="potTbl" style="width:100%"></table></div>
   <h3>How it is worked out</h3>
   <p class="note">Until you retire, the pot grows by the growth rate with the monthly payment added each month. After that it grows with nothing added until drawdown starts. Growth is the rate left after price rises and charges, and the monthly payment is assumed to rise with prices, so every figure is in today's money. 2% is a cautious growth rate. The monthly payment starts as your pension and your employer's from the Take-home calculator, and follows it until you type your own figure. Empty the field to follow it again.</p>
-  <p class="note">Drawdown income is the pot when drawdown starts multiplied by the drawdown rate. That amount is then taken every year, month by month, while the rest of the pot keeps growing. "Pot lasts" is the age at which the pot would run out; "for life" means it would not run out. Income is shown before tax. Drawdown can start from the earliest age the government allows: 55, rising to 57 on 6 April 2028. It can start before you retire; the monthly payment then carries on until you do. </p>
+  <p class="note">Drawdown income is the pot when drawdown starts multiplied by the drawdown rate. The table shows four rates half a point apart around the one you have chosen; tap a row to see the income for every year at that rate. That amount is then taken every year, month by month, while the rest of the pot keeps growing. "Pot lasts" is the age at which the pot would run out; "for life" means it would not run out. Income is shown before tax. Drawdown can start from the earliest age the government allows: 55, rising to 57 on 6 April 2028. It can start before you retire; the monthly payment then carries on until you do. </p>
   <p class="note">Tax relief limits are applied. Payments are held at the annual allowance of £60,000 a year, which counts your employer's payments too. With a salary entered in Take-home pay, the allowance falls for incomes over £260,000, down to £10,000, and payments cannot be more than your pay plus what your employer adds. Once drawdown income is taken, payments are held at £10,000 a year. Taking only the tax-free lump sum does not bring in that limit. Unused allowance from the last three years, which can cover a one-off larger payment, is not included.</p>
   <p class="note">This is an estimate, not financial advice. Investments can fall as well as rise. What you enter is kept in this browser only and is never sent anywhere.</p>
 </div></dialog>
@@ -1001,6 +1016,23 @@ function lastsTo(pot,rate,growth,from,monthly=0,until=from){
   for(let m=1;m<=12*(121-from);m++){b=b*(1+i)+(from+(m-1)/12<until?monthly:0)-w;if(b<=0)return from+Math.floor(m/12);}
   return Infinity;
 }
+// Income year by year once drawdown starts: what comes out of the pot, the State Pension once it starts, and the pot left.
+// The same sum as potCalc's drawdown stage. The last year of the pot pays only what is left in it.
+// Tax: `freeShare` of each amount taken from the pot is tax free (a quarter if no lump sum was taken, nothing if the
+// most allowed was), until `freeLeft` of tax-free cash has been used. The rest, and the State Pension, is taxed as
+// income by `taxOn`. No National Insurance is charged on pension income.
+function drawdownYears(pot,rate,growth,from,to,monthly,until,sp,spFrom,freeShare=0,freeLeft=0,taxOn=()=>0){
+  const i=Math.pow(1+growth/100,1/12)-1,w=pot*rate/100/12,rows=[];let bal=pot;
+  for(let a=from;a<to;a++){
+    let taken=0;
+    for(let m=0;m<12;m++){bal=bal*(1+i)+(a<until?monthly:0);const out=Math.min(bal,w);bal-=out;taken+=out;}
+    const state=a>=spFrom?sp:0,free=Math.min(taken*freeShare,freeLeft),tax=taxOn(taken-free+state);freeLeft-=free;
+    rows.push({age:a,fromPot:taken,sp:state,total:taken+state,free,tax,net:taken+state-tax,left:bal});
+  }
+  return rows;
+}
+// Income tax on a year's pension income, at the tax year and region set in Take-home pay, with the standard allowance.
+const pensionIncomeTax=(income,s)=>taxCum(bands(s),Math.max(0,income-allowanceFor(income)),12);
 // ---- limits on pension tax relief ----
 const AA=60000;     // annual allowance: the most that can go into pensions in a year with tax relief, employer payments included
 const MPAA=10000;   // money purchase annual allowance: the limit once taxable income has been taken from a pension
@@ -1040,7 +1072,9 @@ function potCalc(s,monthly,now=new Date(),limit=AA){
     if(a<ret){paid+=pay*12;if(a<dd)paidIn+=pay*12;}   // paidIn counts what goes in before drawdown starts
   }
   const sp=s.spOn?v(s.spWeekly)*52:0;
-  const rates=[...new Set([3,4,5,6].concat(rate>0?[rate]:[]))].sort((x,y)=>x-y);
+  // The drawdown table always has four rows, half a point apart, with the chosen rate second:
+  // one step below it and two above. The window moves as the rate changes, and never starts below 0.5%.
+  const lo=Math.max(.5,Math.round(((rate>0?rate:3.5)-.5)*100)/100),rates=[0,1,2,3].map(k=>Math.round((lo+k*.5)*100)/100);
   const table=rates.map(r=>({rate:r,income:atDd*r/100,total:atDd*r/100+sp,lasts:lastsTo(atDd,r,g,dd,Math.min(payFull,MPAA/12),ret),own:r===rate}));
   return {rows,age,ret,dd,end,minAge,lumpAge,lump,lumpMax,pot:atDd,start,paidIn,growth:atDd+lump-start-paidIn,yrs:dd-age,
     income:draw,sp,spFrom:Math.max(dd,Math.floor(v(s.spAge))),total:draw+sp,lasts:lastsTo(atDd,rate,g,dd,payAfter,ret),table,
@@ -1202,7 +1236,8 @@ function bind(){
     S[c.key]=Math.min(c.n-1,Math.max(0,i!=null?i:at+d));paintCh(p);save();});
   $("info").addEventListener("click",openInfo);
   $("spOn").addEventListener("change",e=>{S.spOn=e.target.checked;update();});
-  $("ddTbl").addEventListener("click",e=>{const b=e.target.closest("[data-rate]");if(!b)return;S.ppDraw=+b.dataset.rate;$("ppDraw").value=show("ppDraw");update();});
+  $("ddTbl").addEventListener("click",e=>{const b=e.target.closest("[data-rate]");if(b)openDd(+b.dataset.rate);});
+  $("ddUse").addEventListener("click",()=>{S.ppDraw=+$("ddUse").dataset.rate;$("ppDraw").value=show("ppDraw");$("shDd").close();update();});
   for(const [id,t] of [["lsNone","none"],["lsMax","max"],["lsAmt","amount"]])$(id).addEventListener("click",()=>{S.lsType=t;update();});
   $("ciWeekly").addEventListener("click",()=>{S.ciFreq="weekly";update();});
   $("ciMonthly").addEventListener("click",()=>{S.ciFreq="monthly";update();});
@@ -1357,7 +1392,7 @@ function paintCarry(){
   for(const id in CARRYSEL){$(id).value=effSel(id);mark($(id),S[id]==null,CARRYSEL[id].from);}
   document.querySelectorAll(".lk").forEach(l=>{
     const src=by.get(l.closest(".screen"));l.hidden=!src;
-    if(src)l.textContent=`Dashed boxes are carried from ${[...src].join(" and ")}. Change one and it changes here only; ↺ puts it back.`;
+    if(src)l.textContent=`Dashed boxes come from ${[...src].join(" and ")}; ↺ undoes a change.`;
   });
 }
 
@@ -1585,10 +1620,11 @@ function updatePot(payC){
   // tax relief limits: the annual allowance (lower for high incomes) and, where a salary has been entered, no more than the year's pay
   const lim=payC?pensionLimits(S,payC):null,limit=lim?Math.min(lim.allow,lim.pay):AA;
   const P=POT=potCalc(S,monthly,undefined,limit),later=P.spFrom>P.dd;
-  const warn=[],why=lim&&lim.pay<lim.allow?"tax relief stops at your pay":"the tax relief limit"+(limit<AA?" at your income":"");
-  if(P.cutAA&&P.cutMP)warn.push(`Paid in held at ${gbp(limit)} a year, then ${gbp(MPAA)} from ${P.dd}: tax relief limits.`);
-  else if(P.cutAA)warn.push(`Paid in held at ${gbp(limit)} a year: ${why}.`);
-  else if(P.cutMP)warn.push(`From ${P.dd} paid in is held at ${gbp(MPAA)} a year, the limit once income is taken.`);
+  // one short line when a tax relief limit is holding the payments down; Detail explains the rules
+  const warn=[];
+  if(P.cutAA&&P.cutMP)warn.push(`Paid in held at ${gbp(limit)} a year, ${gbp(MPAA)} from ${P.dd}.`);
+  else if(P.cutAA)warn.push(lim&&lim.pay<lim.allow?`Paid in held at ${gbp(limit)} a year: no more than your pay.`:`Paid in held at ${gbp(limit)} a year, the tax relief limit.`);
+  else if(P.cutMP)warn.push(`From ${P.dd} paid in is held at ${gbp(MPAA)} a year.`);
   $("pWarn").hidden=!warn.length;$("pWarn").textContent=warn.join(" ");
   carry("ppDdAge",P.dd);settle("ppDdAge",P.dd);
   if(P.lumpAge!=null){carry("lsAge",P.lumpAge);settle("lsAge",P.lumpAge);}
@@ -1601,10 +1637,10 @@ function updatePot(payC){
   $("lumpKv").innerHTML=S.lsType==="none"?"":kv([[`Pot at ${P.lumpAge} before the lump sum`,gbp(before)],["25% of the pot",gbp(before*.25)],["Limit across all your pensions",gbp(LSA)],
     [`Most that can be taken tax free: ${before*.25<=LSA?"25% of the pot, the lower of the two":"the limit, the lower of the two"}`,gbp(P.lumpMax)],
     ["Lump sum taken",gbp(P.lump),1],["Pot left",gbp(P.rows[P.lumpAge-P.age].pot)]]);
-  // drawdown table: a few standard rates and the user's own, each with what it pays and how long the pot lasts
-  $("ddCap").textContent=S.spOn?`with State Pension${later?" from "+P.spFrom:""}`:"from the pot only";
+  // drawdown table: four rates around the user's own, each with what it pays and how long the pot lasts
+  $("ddCap").textContent=(S.spOn?"with State Pension":"from the pot")+" · tap a row";
   $("ddTbl").innerHTML=`<div class="ddrow"><span></span><em>a year</em><em>a month</em><em>pot lasts</em></div>`
-    +P.table.map(t=>`<button type="button" class="ddrow${t.own?" on":""}" data-rate="${t.rate}" aria-pressed="${t.own}" aria-label="Draw ${t.rate}% a year: ${gbp(t.total)} a year, pot lasts ${lastsText(t.lasts)}"><span>${t.rate}%</span><b>${gbp(t.total)}</b><b>${gbp(t.total/12)}</b><em>${lastsText(t.lasts)}</em></button>`).join("");
+    +P.table.map(t=>`<button type="button" class="ddrow${t.own?" on":""}" data-rate="${t.rate}" aria-pressed="${t.own}" aria-haspopup="dialog" aria-label="${t.rate}% a year: ${gbp(t.total)} a year, pot lasts ${lastsText(t.lasts)}. Show each year"><span>${t.rate}%</span><b>${gbp(t.total)}</b><b>${gbp(t.total/12)}</b><em>${lastsText(t.lasts)}</em></button>`).join("");
   const mx=Math.max(1,...P.rows.map(r=>r.pot));
   $("pBars").innerHTML=P.rows.map(r=>r.draw?`<div><i class="w" style="flex:0 0 ${r.pot/mx*100}%"></i></div>`
     :`<div><i class="g" style="flex:0 0 ${Math.max(0,r.pot-r.paid)/mx*100}%"></i><i class="p" style="flex:0 0 ${Math.min(r.pot,r.paid)/mx*100}%"></i></div>`).join("");
@@ -1618,6 +1654,33 @@ function updatePot(payC){
     payC&&payC.typical>0?["Income as a share of today's take-home pay",pc(P.total/12/payC.typical,0)]:null]);
   $("potTbl").innerHTML="<thead><tr><th>Age</th><th>Stage</th><th>Pot</th></tr></thead><tbody>"
     +P.rows.map(r=>`<tr class="${r.age===P.dd?"key":""}"><td>${r.age}</td><td>${r.draw?(r.age<P.ret?"drawdown, still paying in":"drawdown"):r.age<P.dd?(r.age<P.ret?"saving":"waiting"):"drawdown starts"}</td><td>${gbp(r.pot)}</td></tr>`).join("")+"</tbody>";
+}
+// The popup for one row of the drawdown table: income for every year at that rate, with the step up when the State Pension starts.
+function openDd(rate){
+  const P=POT;if(!P)return;
+  // a quarter of each withdrawal is tax free unless a lump sum has used that up; the most allowed uses all of it
+  const freeShare=S.lsType==="none"?.25:P.lumpMax>0?.25*(1-P.lump/P.lumpMax):0,taxOn=x=>pensionIncomeTax(x,S);
+  const pay=Math.min(P.payFull,MPAA/12),sp=P.sp,rows=drawdownYears(P.pot,rate,v(S.ppGrowth),P.dd,P.end,pay,P.ret,sp,P.spFrom,freeShare,LSA-P.lump,taxOn);
+  const t=P.table.find(x=>x.rate===rate)||{lasts:lastsTo(P.pot,rate,v(S.ppGrowth),P.dd,pay,P.ret)},later=sp>0&&P.spFrom>P.dd;
+  const first=rows[0],atSp=rows.find(r=>r.age>=P.spFrom)||first;   // the first year of drawdown, and the first year with the State Pension
+  $("ddT").textContent=`Drawdown at ${rate}%`;
+  const block=(when,r)=>[[`Income a year${when}`,gbp(r.total),1],r.free>.5?["of which tax free",gbp(r.free)]:null,["Income tax","−"+gbp(r.tax)],["National Insurance","£0"],["After tax",gbp(r.net)]];
+  $("ddKv").innerHTML=kv([[`Pot at ${P.dd}`,gbp(P.pot)],[`From the pot a year, at ${rate}%`,gbp(first.fromPot)],
+    sp>0?[`State Pension a year${later?", from "+P.spFrom:""}`,gbp(sp)]:null]
+    .concat(later?block(` from ${P.dd} to ${P.spFrom-1}`,first):[],block(later?` from ${P.spFrom}`:"",later?atSp:first),[["Pot lasts",lastsText(t.lasts)]]));
+  $("ddTaxNote").textContent=`Income tax uses the ${Y(S).label} rates for ${({eng:"England",sco:"Scotland",wal:"Wales",ni:"Northern Ireland"})[S.region]}, the tax year and region set in Take-home pay, with the standard £12,570 allowance. `
+    +(freeShare>0?`${Math.round(freeShare*1000)/10}% of each amount taken from the pot is tax free${S.lsType==="none"?", because no lump sum was taken":", the part of the tax-free cash not taken as a lump sum"}. `:"Everything taken from the pot is taxed, because the tax-free cash was taken as the lump sum. ")
+    +"The State Pension is taxable. No National Insurance is charged on pension income.";
+  const own=rate===v(S.ppDraw),use=$("ddUse");use.hidden=own;use.dataset.rate=rate;use.textContent=`Use ${rate}% on the main screen`;
+  const cols=sp>0?6:5,full=P.pot*rate/100;let out=false;
+  $("ddYears").innerHTML=`<thead><tr><th>Age</th><th>From pot</th>${sp>0?"<th>State Pension</th>":""}<th>Tax</th><th>After tax</th><th>Pot left</th></tr></thead><tbody>`
+    +rows.map(r=>{
+      let mark="";
+      if(sp>0&&r.age===P.spFrom&&later)mark+=`<tr class="mark up"><td colspan="${cols}">State Pension starts at ${P.spFrom}: income goes up by ${gbp(sp)} a year before tax</td></tr>`;
+      if(!out&&r.fromPot<full-.5){out=true;mark+=`<tr class="mark"><td colspan="${cols}">The pot runs out at ${r.age}${sp>0&&r.age>=P.spFrom?": income falls to the State Pension":""}</td></tr>`;}
+      return mark+`<tr class="${sp>0&&r.age===P.spFrom?"key":""}"><td>${r.age}</td><td>${gbp(r.fromPot)}</td>${sp>0?`<td>${r.sp?gbp(r.sp):"—"}</td>`:""}<td>${gbp(r.tax)}</td><td>${gbp(r.net)}</td><td>${gbp(r.left)}</td></tr>`;
+    }).join("")+"</tbody>";
+  $("shDd").showModal();
 }
 // Each chart shows the figure for one bar: a sensible one to begin with, then whichever is tapped or dragged to.
 function paintBars(el,read,i,text,min,max,now,aria){

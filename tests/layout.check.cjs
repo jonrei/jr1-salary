@@ -37,6 +37,19 @@ const STATES = {
     await p.click('[data-open="shLump"]'); await p.click("#lsMax"); await p.click("#shLump .done");
     await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
   },
+  // the tallest the pension screen gets: a payment carried from Take-home pay (so the "dashed boxes" line shows),
+  // high enough to be held by the tax relief limits (so the warning shows too), and a drawdown rate of the user's own
+  potTallest: async (p) => {
+    await go(p, "take-home"); await p.fill("#salary", "1180000"); await p.click("#back"); await go(p, "pension");
+    await p.fill("#ppAge", "45"); await p.fill("#ppRetire", "67"); await p.fill("#ppPot", "1250000");
+    await p.fill("#ppDraw", "7.5"); await p.fill("#ppDdAge", "57"); await p.click("#ppAge");
+    await p.click('[data-open="shLump"]'); await p.click("#lsMax"); await p.click("#shLump .done");
+    await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
+    // tapping a row of the drawdown table opens the year-by-year popup, which marks the year the State Pension starts
+    await p.click('#ddTbl [data-rate="8"]');
+    if (!(await p.textContent("#ddYears")).includes("State Pension starts at 68")) throw new Error("the year-by-year popup does not show the State Pension starting");
+    await p.click("#ddUse"); if ((await p.inputValue("#ppDraw")) !== "8") throw new Error("the popup's button did not set the drawdown rate");
+  },
   ciEmpty: async (p) => { await go(p, "compound"); },
   ciFull: async (p) => {
     await go(p, "compound"); await p.fill("#ciStart", "1250000"); await p.fill("#ciPay", "2500"); await p.click("#ciWeekly");
