@@ -83,6 +83,7 @@ Rates for each tax year are in the `YEARS` table at the top of the script. Incom
 
 - **Defaults are cautious:** 2% growth, 3.5% drawdown, retire at 67.
 - **Drawdown** can start from the normal minimum pension age (`minAccessAge`): 55, rising to 57 on 6 April 2028. It defaults to the retirement age and can be earlier; the monthly payment then carries on until retirement.
+- **Tax relief limits** are applied to what is paid in (`AA`, `MPAA`, `annualAllowance`, `pensionLimits`): the £60,000 annual allowance, counting the employer's payments; its taper for incomes over £260,000, down to £10,000, when a salary is entered in Take-home pay; no more than the year's pay plus the employer's payments; and £10,000 a year once drawdown income is taken. A tax-free lump sum alone does not bring in the £10,000 limit. Carry forward of unused allowance is not included. Take-home pay warns when the year's payments go over the allowance and estimates the relief to pay back.
 - **Tax-free lump sum:** up to 25% of the pot, capped at the Lump Sum Allowance (`LSA`, £268,275), taken at or before the drawdown age.
 - **State Pension** default is the full new State Pension for 2026/27 (£241.30 a week). Update `spWeekly` in `blank()` and the note in the State Pension panel each April.
 - **Monthly payment** carries over the pension total from Take-home pay (yours plus your employer's) and follows it until a figure is typed; emptying the field links it again.
