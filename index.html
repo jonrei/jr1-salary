@@ -825,7 +825,7 @@ tr.key td,tr.key td:first-child{background:var(--accent-soft);font-weight:700}
     <div id="lsAgeWrap" hidden><label for="lsAge">Taken at age</label><input id="lsAge" type="number" inputmode="numeric" autocomplete="off" enterkeyhint="done" step="1" min="55" max="100"></div>
   </div>
   <dl class="kv" id="lumpKv"></dl>
-  <p class="note">You can normally take up to 25% of a pension pot tax free, up to £268,275 across all your pensions. An amount above that limit is cut back to it. The earliest age is 55, rising to 57 on 6 April 2028; an earlier age is moved up to the earliest allowed for your age. The lump sum is taken when drawdown starts or before, and the pot left carries on growing.</p>
+  <p class="note">The most you can normally take tax free is 25% of the pot or £268,275, whichever is lower. The £268,275 limit is for all your pensions added together, so it only matters for a pot over £1,073,100. If you ask for more than the lower figure, the amount is cut back to it. The earliest age is 55, rising to 57 on 6 April 2028; an earlier age is moved up to the earliest allowed for your age. The lump sum is taken when drawdown starts or before, and the pot left carries on growing.</p>
   <p class="note">Taking more than the tax-free amount is possible but is taxed as income, and is not covered here.</p>
 </div></dialog>
 
@@ -1597,7 +1597,9 @@ function updatePot(payC){
   $("pSub").textContent=(P.yrs>0?`${P.yrs} year${P.yrs===1?"":"s"} away`:"drawdown starts now")
     +(P.ret>P.age?` · ${gbp(P.payFull)} a month ${linked&&FROM_PAY>0&&!P.cutAA?"from your pay":"paid in"}${P.ret!==P.dd?" until "+P.ret:""}`:"");
   $("lsBtn").textContent=S.lsType==="none"?"None":`${gbp(P.lump)} at ${P.lumpAge}`;
-  $("lumpKv").innerHTML=S.lsType==="none"?"":kv([[`Pot at ${P.lumpAge} before the lump sum`,gbp(P.rows[P.lumpAge-P.age].pot+P.lump)],["Most that can be taken tax free",gbp(P.lumpMax)],
+  const before=P.lumpAge==null?0:P.rows[P.lumpAge-P.age].pot+P.lump;
+  $("lumpKv").innerHTML=S.lsType==="none"?"":kv([[`Pot at ${P.lumpAge} before the lump sum`,gbp(before)],["25% of the pot",gbp(before*.25)],["Limit across all your pensions",gbp(LSA)],
+    [`Most that can be taken tax free: ${before*.25<=LSA?"25% of the pot, the lower of the two":"the limit, the lower of the two"}`,gbp(P.lumpMax)],
     ["Lump sum taken",gbp(P.lump),1],["Pot left",gbp(P.rows[P.lumpAge-P.age].pot)]]);
   // drawdown table: a few standard rates and the user's own, each with what it pays and how long the pot lasts
   $("ddCap").textContent=S.spOn?`with State Pension${later?" from "+P.spFrom:""}`:"from the pot only";
