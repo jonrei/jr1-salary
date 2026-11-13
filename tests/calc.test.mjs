@@ -183,6 +183,17 @@ test("once income is taken, payments are held at £10,000 a year", () => {
   near(lumpOnly.rows[1].pot, 75000 + 24000, "a tax-free lump sum alone does not bring in the limit");
 });
 
+test("the drawdown table always has four rows, half a point apart, around the chosen rate", () => {
+  const rates = (r) => Array.from(pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppDraw: r }, 0).table, (t) => t.rate);
+  assert.deepEqual(rates(7), [6.5, 7, 7.5, 8], "the chosen rate is the second row");
+  assert.deepEqual(rates(4.5), [4, 4.5, 5, 5.5]);
+  assert.deepEqual(rates(12), [11.5, 12, 12.5, 13], "it keeps moving as the rate rises");
+  assert.deepEqual(rates(0.5), [0.5, 1, 1.5, 2], "it never starts below 0.5%");
+  assert.deepEqual(rates(0), [3, 3.5, 4, 4.5], "with no rate chosen it shows the usual range");
+  const T = pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppDraw: 7 }, 0).table;
+  assert.deepEqual(Array.from(T, (t) => t.own), [false, true, false, false], "only the chosen rate is marked");
+});
+
 test("the pot falls by the yearly income in drawdown and runs out when expected", () => {
   // no growth and 5% a year: the pot loses 5,000 a year and lasts 20 years
   const P = pot({ ppAge: 60, ppRetire: 60, ppPot: 100000, ppGrowth: 0, ppDraw: 5 }, 0);
