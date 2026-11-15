@@ -105,6 +105,21 @@ const fit = () => {
   await page.goBack(); await page.waitForSelector("#detail:not(.on)");
   await page.close();
 
+  // ---- the linking animation, with motion on ----
+  const live = await browser.newPage({ viewport: { width: 390, height: 664 } }); watch(live, "animation");
+  await live.goto(url); await live.evaluate(() => { Object.assign(S, { salary: 42000, ppAge: 35 }); save(); }); await live.reload();
+  await live.evaluate(() => document.fonts.ready); await live.waitForTimeout(400);
+  await live.click("#sim"); await live.waitForTimeout(700);
+  const mid = await live.evaluate(() => ({ dim: document.querySelectorAll(".tile.dim").length, chips: document.querySelectorAll(".chip").length,
+    lit: [...document.getElementById("fx").getContext("2d").getImageData(0, 0, 400, 400).data].some((x) => x > 0) }));
+  need(mid.dim > 0, "panels outside the chain did not fade back during a change");
+  need(mid.chips > 0, "no panel showed how far its figure moved");
+  need(mid.lit, "nothing was drawn on the map canvas");
+  await live.waitForTimeout(3500);
+  need(await live.evaluate(() => document.querySelectorAll(".tile.dim,.chip").length === 0), "the map did not return to rest after a change");
+  report("animation map", await live.evaluate(fit));
+  await live.close();
+
   await browser.close(); server.close();
   if (problems.length) { console.error("\n" + problems.join("\n")); process.exit(1); }
   console.log("\nThe map and every page fit with no scrolling, make no outside requests and store nothing beyond the one key.");

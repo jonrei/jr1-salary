@@ -69,6 +69,15 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .tile.aux .go{font-size:.8rem;font-weight:600;color:var(--ink);background:var(--hot);border-radius:.2rem;padding:.3rem .1rem;line-height:1.15;text-align:center}
 .tile.aux .ex{font-size:.52rem;color:var(--dim);line-height:1.3}
 .tile.aux .ex b{color:var(--fg);font-weight:500}
+/* movement: dots circle each territory on a canvas over the map, so the solid territory borders are dropped while it runs */
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+#map.live .zone{border-color:transparent}
+#map.live .tile{transition:border-color .3s,box-shadow .3s,opacity .35s,transform .25s}
+.tile.dim{opacity:.22}
+.tile.hit{transform:scale(1.045);border-color:var(--hot);box-shadow:0 0 1.2rem color-mix(in srgb,var(--z) 70%,transparent),inset 0 0 .8rem color-mix(in srgb,var(--z) 25%,transparent)}
+.chip{position:absolute;z-index:3;transform:translate(-50%,-50%);padding:.1rem .35rem;border:1px solid var(--z);border-radius:.25rem;background:var(--bg);color:var(--z);font-size:.92rem;font-weight:600;white-space:nowrap;
+  box-shadow:0 0 .8rem color-mix(in srgb,var(--z) 60%,transparent);pointer-events:none;animation:chip 2.3s ease-out both}
+@keyframes chip{0%{opacity:0;transform:translate(-50%,-10%) scale(.6)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}22%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-130%)}}
 /* routes: lines through the gaps between panels, with dashes that drift from a panel to what it feeds */
 #wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0}
 #wires path{fill:none;stroke:var(--z);stroke-width:1.3;stroke-dasharray:3 4;opacity:.75;animation:flow 1.1s linear infinite}
@@ -164,7 +173,7 @@ body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;
 <div id="stage">
   <div class="bar"><b>JR1 MONEY</b><span class="cursor" aria-hidden="true"></span><a href="./">classic view</a></div>
   <main id="view">
-    <div id="map" aria-label="All calculators"><svg id="wires" aria-hidden="true"></svg></div>
+    <div id="map" aria-label="All calculators"><svg id="wires" aria-hidden="true"></svg><canvas id="fx" aria-hidden="true"></canvas></div>
     <section id="detail"></section>
   </main>
   <div id="log" aria-live="polite"><div>&gt; starting…</div></div>
@@ -815,6 +824,7 @@ function wires(){
     const t=document.createElementNS(NS,"polygon");t.setAttribute("points",[pt(0,0),pt(-5,-3.2),pt(-5,3.2)].join(" "));t.style.setProperty("--z",`var(--z-${m.z})`);svg.appendChild(t);
     EDGE[m.k+">"+d]={p,len:p.getTotalLength()};
   }
+  fxMeasure();
 }
 // a bright dot runs along a route from one panel to the next
 function pulse(a,b,ms){
@@ -839,7 +849,7 @@ const ROOTS=MODS.filter(m=>FEEDS[m.k].length&&!MODS.some(x=>FEEDS[x.k].includes(
 
 // ---- a change in one calculator travels outward along its links: each linked panel updates as the signal reaches it ----
 function change(src,edit,what){
-  edit();const prev=OUT,next=model(),HOP=420,still=STILL()||!!open;
+  edit();const prev=OUT,next=model(),HOP=480,still=STILL()||!!open,hops=[];
   const sig=o=>JSON.stringify(o&&[o.big,o.rows]),changed=new Set(MODS.filter(m=>sig(next[m.k])!==sig(prev[m.k])).map(m=>m.k));
   OUT=next;save();say(`&gt; ${what}`);
   const land=(k,from)=>{paintTile(BY[k]);flash(TILE[k].el);document.querySelectorAll(`.lnk[data-k="${k}"]`).forEach(flash);
@@ -849,11 +859,83 @@ function change(src,edit,what){
   while(wave.length){
     const nxt=[];depth++;
     for(const a of wave)for(const b of FEEDS[a]){if(seen.has(b)||!changed.has(b))continue;seen.add(b);nxt.push(b);
-      const at=still?0:(depth-1)*HOP;setTimeout(()=>pulse(a,b,HOP-60),at);setTimeout(()=>land(b,a),at+(still?0:HOP-40));}
+      const at=still?0:(depth-1)*HOP;hops.push({a,b,at});setTimeout(()=>land(b,a),at+(still?0:HOP-40));}
     wave=nxt;
   }
+  if(!still&&hops.length)surge(hops,seen,HOP,prev);
   for(const m of MODS)if(!seen.has(m.k)){paintTile(m);if(changed.has(m.k))flash(TILE[m.k].el);}
   if(open)paintPage(false);
+}
+
+// ---- movement on the map, drawn on a canvas that lies over it ----
+// At rest, two dots circle each territory with a fading tail; the territory borders themselves are faint.
+// When a figure changes, a surge runs down each route it travels and the route stays lit until the whole chain has finished.
+// Panels the change does not reach fade back, and each panel it reaches shows how far its figure moved.
+const FX={zones:[],beams:[],laps:[],timers:[],u:1};
+const poly=p=>{const d=[0];for(let i=1;i<p.length;i++)d.push(d[i-1]+Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]));return {p,d,len:d[d.length-1]};};
+// the outline of a box with rounded corners, as a closed line; `out` moves it outward
+function outline(b,r,out){
+  const x=b.x-out,y=b.y-out,w=b.w+out*2,h=b.h+out*2,p=[],arc=(cx,cy,a0)=>{for(let i=0;i<=6;i++){const a=a0+i/6*Math.PI/2;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}};
+  arc(x+w-r,y+r,-Math.PI/2);arc(x+w-r,y+h-r,0);arc(x+r,y+h-r,Math.PI/2);arc(x+r,y+r,Math.PI);p.push(p[0]);return poly(p);
+}
+// the point a distance s along a line; a closed line wraps round
+function along(P,s){
+  s=((s%P.len)+P.len)%P.len;let i=1;while(i<P.d.length-1&&P.d[i]<s)i++;
+  const t=(s-P.d[i-1])/((P.d[i]-P.d[i-1])||1);return [P.p[i-1][0]+(P.p[i][0]-P.p[i-1][0])*t,P.p[i-1][1]+(P.p[i][1]-P.p[i-1][1])*t];
+}
+function fxMeasure(){   // called whenever the routes are measured, so both always match the map as it is laid out
+  const cv=$("fx"),map=$("map"),o=map.getBoundingClientRect(),zc=el=>getComputedStyle(el).getPropertyValue("--z").trim()||"#5dffa0";
+  if(!cv)return;
+  FX.W=o.width;FX.H=o.height;FX.dpr=Math.min(2,devicePixelRatio||1);FX.u=parseFloat(getComputedStyle(document.documentElement).fontSize)/12;   // one unit is a twelfth of a rem
+  cv.width=Math.round(FX.W*FX.dpr);cv.height=Math.round(FX.H*FX.dpr);
+  FX.zones=[...map.querySelectorAll(".zone")].map(z=>{const r=z.getBoundingClientRect();return {c:zc(z),path:outline({x:r.left-o.left,y:r.top-o.top,w:r.width,h:r.height},7*FX.u,-.5)};});
+  for(const k in TILE){TILE[k].ring=outline(TILE[k].box,4*FX.u,1.5*FX.u);TILE[k].c=zc(TILE[k].el);}
+}
+// a bright head with a tail that fades behind it
+function comet(g,P,s,len,c,w){
+  const n=14,u=FX.u;g.lineCap="round";g.strokeStyle=c;g.lineWidth=w*u;
+  for(let k=0;k<n;k++){const a=along(P,s-len*k/n),b=along(P,s-len*(k+1)/n);if(Math.hypot(a[0]-b[0],a[1]-b[1])>len)continue;g.globalAlpha=Math.pow(1-k/n,1.8);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();}
+  const h=along(P,s);g.globalAlpha=1;g.shadowColor=c;g.shadowBlur=10*u;g.fillStyle="#fff";g.beginPath();g.arc(h[0],h[1],(w+.2)*u,0,7);g.fill();g.shadowBlur=0;
+}
+function fxFrame(t){
+  requestAnimationFrame(fxFrame);
+  const g=$("fx").getContext("2d"),u=FX.u;g.setTransform(FX.dpr,0,0,FX.dpr,0,0);g.clearRect(0,0,FX.W,FX.H);
+  if(open||document.hidden||!FX.zones.length)return;
+  FX.zones.forEach((z,n)=>{   // the territories: a faint line, and two dots that circle it
+    g.globalAlpha=.2;g.strokeStyle=z.c;g.lineWidth=1;g.beginPath();z.path.p.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.stroke();
+    for(let k=0;k<2;k++)comet(g,z.path,t*.07*u+z.path.len*(k/2+n*.13),95*u,z.c,1.6);
+  });
+  FX.laps=FX.laps.filter(r=>t-r.t0<1100);   // a dot laps a panel as the change lands on it
+  for(const r of FX.laps){const q=(t-r.t0)/1100;comet(g,r.path,r.path.len*(1-Math.pow(1-q,2)),r.path.len*.35*(1-q*.6),r.c,2.4);}
+  FX.beams=FX.beams.filter(f=>t<f.end+500);
+  for(const f of FX.beams){
+    if(t<f.t0)continue;const q=(t-f.t0)/f.ms,P=f.path,fade=Math.max(0,Math.min(1,1-(t-f.end)/500));
+    if(q<1){g.shadowColor=f.c;g.shadowBlur=14*u;comet(g,P,P.len*q,Math.min(P.len*q,P.len*.7),f.c,4);g.shadowBlur=0;}
+    // the part already travelled stays lit until the whole chain has finished
+    g.shadowColor=f.c;g.shadowBlur=9*u;g.globalAlpha=.85*fade;g.strokeStyle=f.c;g.lineWidth=2.4*u;g.lineCap="round";g.beginPath();
+    for(let i=0;i<=40*Math.min(1,q);i++){const p=along(P,Math.min(P.len-.01,P.len*i/40));i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]);}
+    g.stroke();g.shadowBlur=0;
+  }
+  g.globalAlpha=1;
+}
+function surge(hops,seen,HOP,prev){
+  const map=$("map"),now=performance.now(),end=now+Math.max(...hops.map(h=>h.at))+HOP+1500,later=(f,ms)=>FX.timers.push(setTimeout(f,ms));
+  FX.beams=[];FX.timers.forEach(clearTimeout);FX.timers=[];map.querySelectorAll(".chip").forEach(e=>e.remove());
+  const keep=new Set([...seen].map(k=>TILE[k].el)),all=[...map.querySelectorAll(".tile")];
+  all.forEach(el=>el.classList.toggle("dim",!keep.has(el)));later(()=>all.forEach(el=>el.classList.remove("dim")),end-now);
+  for(const h of hops){
+    const fwd=EDGE[h.a+">"+h.b],e=fwd||EDGE[h.b+">"+h.a];if(!e)continue;
+    const pts=[];for(let i=0;i<=40;i++){const p=e.p.getPointAtLength(e.len*(fwd?i/40:1-i/40));pts.push([p.x,p.y]);}
+    FX.beams.push({path:poly(pts),t0:now+h.at,ms:HOP,end,c:TILE[h.a].c});
+    later(()=>{
+      const T=TILE[h.b],a=prev[h.b],b=OUT[h.b];T.el.classList.add("hit");setTimeout(()=>T.el.classList.remove("hit"),700);
+      FX.laps.push({path:T.ring,c:T.c,t0:performance.now()});
+      if(a&&b&&!a.text&&!b.text&&a.big!==b.big){   // how far the main figure moved
+        const d=b.big-a.big,c=document.createElement("div");c.className="chip";c.textContent=(d>=0?"+":"")+gbp(d,Math.abs(d)<100?2:0);
+        c.style.cssText=`left:${T.box.x+T.box.w/2}px;top:${T.box.y+T.box.h*.52}px;--z:${T.c}`;map.appendChild(c);setTimeout(()=>c.remove(),2300);
+      }
+    },h.at+HOP-40);
+  }
 }
 
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
@@ -991,6 +1073,7 @@ if(typeof document!=="undefined"&&document.getElementById("map")){
   S=load();build();$("detail").addEventListener("click",pageClick);addEventListener("hashchange",route);
   (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(()=>{
     wires();route(true);
+    if(!STILL()){$("map").classList.add("live");requestAnimationFrame(fxFrame);}
     if(!open){say("&gt; linking 14 panels…");setTimeout(()=>{ripple(ROOTS);setTimeout(()=>say("&gt; ready. tap a panel to zoom in."),1500);},350);}
   });
   // the service worker keeps a copy of the app files (never anything you enter) so it opens quickly and works offline
