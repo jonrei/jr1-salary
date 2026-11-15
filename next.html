@@ -75,8 +75,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #map.live .tile{transition:border-color .3s,box-shadow .3s,opacity .35s,transform .25s}
 .tile.dim{opacity:.22}
 .tile.hit{transform:scale(1.045);border-color:var(--hot);box-shadow:0 0 1.2rem color-mix(in srgb,var(--z) 70%,transparent),inset 0 0 .8rem color-mix(in srgb,var(--z) 25%,transparent)}
-.chip{position:absolute;z-index:3;transform:translate(-50%,-50%);padding:.1rem .35rem;border:1px solid var(--z);border-radius:.25rem;background:var(--bg);color:var(--z);font-size:.92rem;font-weight:600;white-space:nowrap;
-  box-shadow:0 0 .8rem color-mix(in srgb,var(--z) 60%,transparent);pointer-events:none;animation:chip 2.3s ease-out both}
+.chip{position:absolute;z-index:3;transform:translate(-50%,-50%);padding:.1rem .35rem;border:1px solid var(--z);border-radius:.25rem;background:var(--bg);color:var(--z);font-size:1.05rem;font-weight:600;white-space:nowrap;
+  box-shadow:0 0 .8rem color-mix(in srgb,var(--z) 60%,transparent);pointer-events:none;animation:chip 2.6s ease-out both}
 @keyframes chip{0%{opacity:0;transform:translate(-50%,-10%) scale(.6)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}22%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-130%)}}
 /* routes: lines through the gaps between panels, with dashes that drift from a panel to what it feeds */
 #wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0}
@@ -862,7 +862,7 @@ function change(src,edit,what){
       const at=still?0:(depth-1)*HOP;hops.push({a,b,at});setTimeout(()=>land(b,a),at+(still?0:HOP-40));}
     wave=nxt;
   }
-  if(!still&&hops.length)surge(hops,seen,HOP,prev);
+  if(!still&&hops.length)surge(src,hops,seen,HOP,prev);
   for(const m of MODS)if(!seen.has(m.k)){paintTile(m);if(changed.has(m.k))flash(TILE[m.k].el);}
   if(open)paintPage(false);
 }
@@ -918,22 +918,30 @@ function fxFrame(t){
   }
   g.globalAlpha=1;
 }
-function surge(hops,seen,HOP,prev){
+// a route as a line of points, running from panel a to panel b
+function routeLine(a,b){
+  const fwd=EDGE[a+">"+b],e=fwd||EDGE[b+">"+a],pts=[];if(!e)return null;
+  for(let i=0;i<=40;i++){const p=e.p.getPointAtLength(e.len*(fwd?i/40:1-i/40));pts.push([p.x,p.y]);}
+  return poly(pts);
+}
+// a badge over a panel showing how far its main figure moved; a panel with no figure before counts from nothing
+function badge(k,prev){
+  const T=TILE[k],a=prev[k],b=OUT[k],from=a&&!a.text?a.big:0;if(!b||b.text||b.big===from)return;
+  const d=b.big-from,c=document.createElement("div");c.className="chip";c.textContent=(d>=0?"+":"")+gbp(d,Math.abs(d)<100?2:0);
+  c.style.cssText=`left:${T.box.x+T.box.w/2}px;top:${T.box.y+T.box.h*.52}px;--z:${T.c}`;$("map").appendChild(c);setTimeout(()=>c.remove(),2600);
+}
+function surge(src,hops,seen,HOP,prev){
   const map=$("map"),now=performance.now(),end=now+Math.max(...hops.map(h=>h.at))+HOP+1500,later=(f,ms)=>FX.timers.push(setTimeout(f,ms));
   FX.beams=[];FX.timers.forEach(clearTimeout);FX.timers=[];map.querySelectorAll(".chip").forEach(e=>e.remove());
   const keep=new Set([...seen].map(k=>TILE[k].el)),all=[...map.querySelectorAll(".tile")];
   all.forEach(el=>el.classList.toggle("dim",!keep.has(el)));later(()=>all.forEach(el=>el.classList.remove("dim")),end-now);
+  badge(src,prev);FX.laps.push({path:TILE[src].ring,c:TILE[src].c,t0:now});
   for(const h of hops){
-    const fwd=EDGE[h.a+">"+h.b],e=fwd||EDGE[h.b+">"+h.a];if(!e)continue;
-    const pts=[];for(let i=0;i<=40;i++){const p=e.p.getPointAtLength(e.len*(fwd?i/40:1-i/40));pts.push([p.x,p.y]);}
-    FX.beams.push({path:poly(pts),t0:now+h.at,ms:HOP,end,c:TILE[h.a].c});
+    const path=routeLine(h.a,h.b);if(!path)continue;
+    FX.beams.push({path,t0:now+h.at,ms:HOP,end,c:TILE[h.a].c});
     later(()=>{
-      const T=TILE[h.b],a=prev[h.b],b=OUT[h.b];T.el.classList.add("hit");setTimeout(()=>T.el.classList.remove("hit"),700);
-      FX.laps.push({path:T.ring,c:T.c,t0:performance.now()});
-      if(a&&b&&!a.text&&!b.text&&a.big!==b.big){   // how far the main figure moved
-        const d=b.big-a.big,c=document.createElement("div");c.className="chip";c.textContent=(d>=0?"+":"")+gbp(d,Math.abs(d)<100?2:0);
-        c.style.cssText=`left:${T.box.x+T.box.w/2}px;top:${T.box.y+T.box.h*.52}px;--z:${T.c}`;map.appendChild(c);setTimeout(()=>c.remove(),2300);
-      }
+      const T=TILE[h.b];T.el.classList.add("hit");setTimeout(()=>T.el.classList.remove("hit"),700);
+      FX.laps.push({path:T.ring,c:T.c,t0:performance.now()});badge(h.b,prev);
     },h.at+HOP-40);
   }
 }
