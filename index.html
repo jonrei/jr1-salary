@@ -199,6 +199,8 @@ table.mini tr.key td{border-top:1px solid var(--line);font-weight:700}
 .homefoot{margin-top:auto;display:flex;align-items:flex-end;gap:.8rem}
 .homefoot .note{margin:0;font-size:.85rem;flex:1 1 auto}
 .homefoot .btn{flex:none;white-space:nowrap}
+.homebtns{flex:none;display:flex;flex-direction:column;gap:.35rem}
+.homebtns a{text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;flex:none}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:.55rem;padding:.3rem .45rem;min-width:0}
 .stat .v{font-family:var(--num);font-size:1.12rem;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -753,7 +755,7 @@ tr.mark.up td,tr.mark.up td:first-child{background:var(--accent-soft);color:var(
     <div id="homeGrid"></div>
     <div class="homefoot">
       <p class="note">Figures carry between calculators and are kept in this browser only, never sent anywhere. Estimates, not financial or tax advice.</p>
-      <button type="button" class="btn small" id="resetAll">Clear my figures</button>
+      <div class="homebtns"><a class="btn small" href="next.html">Try the map view</a><button type="button" class="btn small" id="resetAll">Clear my figures</button></div>
     </div>
   </div>
   <noscript><p class="note">These calculators need JavaScript turned on. Everything runs on your device; nothing is sent anywhere.</p></noscript>

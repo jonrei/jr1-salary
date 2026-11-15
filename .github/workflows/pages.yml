@@ -39,6 +39,7 @@ jobs:
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
       - run: npm run check:layout
+      - run: npm run check:next
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -50,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Collect site files
-        run: mkdir _site && cp -r index.html 404.html favicon.svg site.webmanifest sw.js CNAME fonts icons _site/
+        run: mkdir _site && cp -r index.html next.html 404.html favicon.svg site.webmanifest sw.js CNAME fonts icons _site/
       - uses: actions/upload-pages-artifact@v3
       - id: deploy
         uses: actions/deploy-pages@v4

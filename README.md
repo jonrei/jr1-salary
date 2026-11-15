@@ -11,6 +11,16 @@ The front page lists every calculator, in groups, with the last figure worked ou
 | Home and borrowing | Mortgage, Stamp duty, Loan, Debt payoff |
 | Tax | Self-employed (sole trader or dividends), Capital gains, Inheritance tax |
 
+## The map view (`next.html`)
+
+A new interface is being built beside the classic one, at **https://money.jr1.com/next.html**. It is one screen drawn as a map: four territories (pay, saving, home and borrowing, tax), a panel for each calculator, and routes between panels that share figures. Tapping a panel zooms into its page. A change in one calculator runs along the routes and updates the panels it feeds. The look is a dark terminal with green text.
+
+- It uses **the same maths** as `index.html` (a test checks the two copies are identical) and **the same saved figures** (the `jr1-money` key), so the two views can be used in turn.
+- `MODS` in its script lists each calculator: name, question, sections (tabs), fields and a `calc` that returns the figures to show. `LINK` lists the carried fields; the routes on the map are drawn from it.
+- The first section of each page (MAIN) must fit without scrolling. Other inputs go in further sections. Tables and HELP scroll inside their own box.
+- When the maths in `index.html` changes, copy the script up to the `interface` marker into `next.html`.
+- Still to come before it replaces the classic view: the charts, and named lists for salary sacrifice and after-tax deductions (each is one total for now).
+
 ## Ethos
 
 1. **Your figures stay with you.** What a user enters is kept in their own browser, under one storage key, so it is there on the next visit. It is never sent anywhere. No cookies, analytics or network calls. The page's content security policy blocks sending data, and a test checks the rest.
@@ -25,6 +35,8 @@ The front page lists every calculator, in groups, with the last figure worked ou
 - `sw.js`, `site.webmanifest`, `icons/`: let the app be added to a phone's home screen and open with no signal. The service worker keeps only the app's own files.
 - `favicon.svg`, `404.html`, `CNAME`: site icon, not-found page and the custom domain for GitHub Pages.
 - `tests/calc.test.mjs`: checks the maths against figures worked out by hand, and that the page stores only its one key and sends nothing.
+- `next.html`: the map view, also one file.
+- `tests/next.check.cjs`: the same checks for the map view: the map and every section of every page at nine phone sizes, plus typing, carrying and reset.
 - `tests/layout.check.cjs`: opens the app in a browser at nine phone sizes and fails if any screen scrolls.
 - `.github/workflows/pages.yml`: runs both on every push and pull request, and deploys `main` to GitHub Pages.
 
@@ -33,6 +45,7 @@ The front page lists every calculator, in groups, with the last figure worked ou
 ```
 npm test                 # maths and privacy; needs Node 20 or later, no packages
 npm run check:layout     # phone-screen fit; needs Playwright (npx playwright install chromium)
+npm run check:next       # the same for the map view
 ```
 
 ## How the screen fits every phone
