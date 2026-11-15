@@ -15,6 +15,7 @@ The front page lists every calculator, in groups, with the last figure worked ou
 
 A new interface is being built beside the classic one, at **https://money.jr1.com/next.html**. It is one screen drawn as a map: four territories (pay, saving, home and borrowing, tax), a panel for each calculator, and routes between panels that share figures. Tapping a panel zooms into its page. A change in one calculator runs along the routes and updates the panels it feeds. The look is a dark terminal with green text.
 
+- **Movement** is drawn on a canvas over the map (`fxFrame`): two dots circle each territory, and when a figure changes a surge runs down each route (`surge`), the route stays lit until the chain has finished, panels outside the chain fade back, and each panel reached shows how far its figure moved. With reduced motion set on the phone, none of this runs and the borders are solid.
 - It uses **the same maths** as `index.html` (a test checks the two copies are identical) and **the same saved figures** (the `jr1-money` key), so the two views can be used in turn.
 - `MODS` in its script lists each calculator: name, question, sections (tabs), fields and a `calc` that returns the figures to show. `LINK` lists the carried fields; the routes on the map are drawn from it.
 - The first section of each page (MAIN) must fit without scrolling. Other inputs go in further sections. Tables and HELP scroll inside their own box.
