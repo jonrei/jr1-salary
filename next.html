@@ -102,6 +102,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .inrow .lab small{display:block;font-size:.7rem;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
 .inrow .val{flex:0 0 7.4rem;min-height:2.5rem;text-align:right;font-size:1.12rem;font-weight:600;color:var(--hot);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px dotted var(--line)}
 .inrow .val.wide{flex-basis:11.5rem;font-size:1rem}
+.inrow .val.long{font-size:.92rem;letter-spacing:-.03em}
 .inrow .val.carried{text-decoration:underline dashed;text-underline-offset:.2em}
 .inrow .val.off{color:var(--dim);border-bottom-color:transparent}
 .inrow input{flex:0 0 7.4rem;width:7.4rem;min-height:2.5rem;text-align:right;font:inherit;font-size:var(--field);font-weight:600;color:var(--ink);background:var(--hot);border:0;border-radius:.2rem;padding:0 .3rem}
@@ -577,7 +578,7 @@ const MODS=[
       C("bsType","bonus into pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","To leave a set take-home"]]),
       N("bsValue","that amount",100,"gbp",{show:()=>S.bsType!=="none",fmtOf:()=>S.bsType==="pct"?"pct":"gbp",stepOf:()=>S.bsType==="pct"?5:100}),
       N("risePct","pay rise in the year",.5,"pct",{min:-50}),C("riseFrom","pay rise starts",()=>MONTHS.map((m,i)=>[i+1,m]))]],
-    ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","set your pension by",[["pct","A % of salary"],["target","A take-home target"]]),
+    ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","A take-home target"]]),
       N("netTarget","monthly take-home target",50,"gbp",{show:()=>S.pensionMode==="target"}),N("sacYear","other sacrifice a year",100,"gbp",SAC),N("postMonth","after-tax deductions /mo",10,"gbp",POST)]]],
   calc(c){
     if(!(v(S.salary)>0))return null;
@@ -893,7 +894,7 @@ function inputRow(f,o){
   const ro=f.ro&&f.ro(o)!=null,car=carried(f),own=!!LINK[f.id]&&S[f.id]!=null&&LINK[f.id].get(CTX)!=null,src=LINK[f.id]?BY[LINK[f.id].from]:null;
   const sub=f.sub&&f.sub()?f.sub():car?"⇠ live from "+full(src).toLowerCase():own?"your own figure":"";
   const lab=`<span class="lab">${esc(f.label)}${sub?`<small>${esc(sub)}</small>`:""}</span>`,rs=own?`<button type="button" class="st rs" data-rs="${f.id}" aria-label="Put the carried figure back">↺</button>`:"";
-  const val=`class="val${car?" carried":""}${ro?" off":""}${f.t==="c"?" wide":""}"`,txt=esc(fieldText(f,o));
+  const val=`class="val${car?" carried":""}${ro?" off":""}${f.t==="c"?" wide":""}${f.t==="n"&&fieldText(f,o).length>9?" long":""}"`,txt=esc(fieldText(f,o));
   if(f.t==="b")return `<div class="inrow">${lab}<button type="button" ${val} data-flip="${f.id}" aria-pressed="${!!S[f.id]}">${txt}</button></div>`;
   if(f.t==="c")return `<div class="inrow">${lab}${rs}<button type="button" class="st" data-cyc="${f.id}" data-d="-1" aria-label="Previous ${esc(f.label)}">‹</button><button type="button" ${val} data-cyc="${f.id}" data-d="1">${txt}</button><button type="button" class="st" data-cyc="${f.id}" data-d="1" aria-label="Next ${esc(f.label)}">›</button></div>`;
   return `<div class="inrow">${lab}${rs}<button type="button" class="st" data-step="${f.id}" data-d="-1" aria-label="Lower ${esc(f.label)}"${ro?" disabled":""}>−</button><button type="button" ${val} data-edit="${f.id}" aria-label="Type ${esc(f.label)}"${ro?" disabled":""}>${txt}</button><button type="button" class="st" data-step="${f.id}" data-d="1" aria-label="Raise ${esc(f.label)}"${ro?" disabled":""}>+</button></div>`;
