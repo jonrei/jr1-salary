@@ -11,6 +11,7 @@ Read `README.md` first. It holds the ethos, the file list, how the screen is siz
 - **Figures carry between calculators but never back.** A carried field stays `null` in the state and reads its figure through `eff(id)`. Typing in it must never change the calculator it came from. New shared fields go in `CARRY` or `CARRYSEL`.
 - **Tax rules go out of date.** When touching a tax calculator, check its rates against GOV.UK and update `NOTES` to match.
 - **Pension and savings defaults stay cautious.** Pension figures are in today's money. Say "estimate, not financial advice".
+- **The map view (`next.html`)** follows every rule here. Its maths must stay identical to `index.html` (a test checks): change the maths in `index.html`, then copy the script up to the `interface` marker across. Run `npm run check:next` after any change to it. The MAIN section of each page must fit without scrolling.
 - One HTML file, no build step, no framework, no runtime packages. Sizes in `rem`, never `px`, except the 16px minimum on form fields.
 - Every change to the maths needs a test in `tests/calc.test.mjs` with the expected figure worked out by hand.
 - Meet WCAG AA contrast in light and dark mode.
