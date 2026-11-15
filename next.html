@@ -822,47 +822,47 @@ function wires(){
     const p=document.createElementNS(NS,"path");p.setAttribute("d","M"+pts.map(q=>q.map(n=>n.toFixed(1)).join(" ")).join(" L"));p.style.setProperty("--z",`var(--z-${m.z})`);svg.appendChild(p);
     const [ex,ey]=pts[pts.length-1],[px,py]=pts[pts.length-2],ang=Math.atan2(ey-py,ex-px),pt=(dx,dy)=>[(ex+dx*Math.cos(ang)-dy*Math.sin(ang)).toFixed(1),(ey+dx*Math.sin(ang)+dy*Math.cos(ang)).toFixed(1)].join(",");
     const t=document.createElementNS(NS,"polygon");t.setAttribute("points",[pt(0,0),pt(-5,-3.2),pt(-5,3.2)].join(" "));t.style.setProperty("--z",`var(--z-${m.z})`);svg.appendChild(t);
-    EDGE[m.k+">"+d]={p,len:p.getTotalLength()};
+    EDGE[m.k+">"+d]={p,pts};
   }
   fxMeasure();
 }
-// a bright dot runs along a route from one panel to the next
-function pulse(a,b,ms){
-  const fwd=EDGE[a+">"+b],e=fwd||EDGE[b+">"+a];if(!e||open||STILL())return;
-  e.p.classList.add("live");setTimeout(()=>e.p.classList.remove("live"),ms+450);
-  const c=document.createElementNS(NS,"circle");c.setAttribute("r",3.4);$("wires").appendChild(c);
-  const t0=performance.now(),step=t=>{const q=Math.min(1,(t-t0)/ms),pt=e.p.getPointAtLength(e.len*(fwd?q:1-q));c.setAttribute("cx",pt.x);c.setAttribute("cy",pt.y);if(q<1)requestAnimationFrame(step);else c.remove();};
-  requestAnimationFrame(step);
-}
-// The linking animation on its own, with no figures changing: signals leave the given panels and run down every route
-// below them, lighting each panel as they arrive. Played when the map first appears and each time it is returned to.
-function ripple(roots,HOP=420){
-  if(STILL())return;
-  const seen=new Set(roots);let wave=roots,depth=0;roots.forEach(k=>flash(TILE[k].el));
+// How a signal spreads from the given panels: which routes it takes and when it reaches each panel. It moves at one
+// speed along every route, so routes that leave a panel along the same line carry one dot, which splits where they part.
+function spread(roots,ok){
+  const arr=Object.fromEntries(roots.map(k=>[k,0])),hops=[];let wave=roots;
   while(wave.length){
     const nxt=[];
-    for(const a of wave)for(const b of FEEDS[a]){if(seen.has(b))continue;seen.add(b);nxt.push(b);setTimeout(()=>pulse(a,b,HOP-60),depth*HOP);setTimeout(()=>flash(TILE[b].el),depth*HOP+HOP-40);}
-    wave=nxt;depth++;
+    for(const a of wave)for(const b of FEEDS[a]){
+      if(b in arr||!ok(b))continue;
+      const path=routeLine(a,b),ms=path?Math.max(380,path.len/(.26*FX.u)):0;arr[b]=arr[a]+ms;nxt.push(b);hops.push({a,b,at:arr[a],ms,path});
+    }
+    wave=nxt;
   }
+  return {arr,hops,last:Math.max(0,...Object.values(arr))};
+}
+// a panel lights as the signal lands on it, and a dot laps its border
+function arrive(k){const T=TILE[k];flash(T.el);T.el.classList.add("hit");setTimeout(()=>T.el.classList.remove("hit"),700);FX.laps.push({path:T.ring,c:T.c,t0:performance.now()});}
+function beams(hops,end){const now=performance.now();for(const h of hops)if(h.path)FX.beams.push({path:h.path,t0:now+h.at,ms:h.ms,end,c:TILE[h.a].c});}
+// The linking animation on its own, with no figures changing: a dot leaves each of the given panels and runs down every route
+// below it, lighting each panel as it arrives. Played when the map first appears and each time it is returned to.
+function ripple(roots){
+  if(STILL()||open)return;
+  const sp=spread(roots,()=>true);roots.forEach(arrive);beams(sp.hops,performance.now()+sp.last+1200);
+  for(const h of sp.hops)setTimeout(()=>{if(!open)arrive(h.b);},h.at+h.ms);
 }
 const ROOTS=MODS.filter(m=>FEEDS[m.k].length&&!MODS.some(x=>FEEDS[x.k].includes(m.k))).map(m=>m.k);   // panels that feed others and are fed by none
 
 // ---- a change in one calculator travels outward along its links: each linked panel updates as the signal reaches it ----
 function change(src,edit,what){
-  edit();const prev=OUT,next=model(),HOP=480,still=STILL()||!!open,hops=[];
+  edit();const prev=OUT,next=model(),still=STILL()||!!open;
   const sig=o=>JSON.stringify(o&&[o.big,o.rows]),changed=new Set(MODS.filter(m=>sig(next[m.k])!==sig(prev[m.k])).map(m=>m.k));
   OUT=next;save();say(`&gt; ${what}`);
   const land=(k,from)=>{paintTile(BY[k]);flash(TILE[k].el);document.querySelectorAll(`.lnk[data-k="${k}"]`).forEach(flash);
     if(from&&next[k]&&prev[k]&&bigText(prev[k])!==bigText(next[k]))say(`&nbsp;&nbsp;↳ ${BY[from].n.toLowerCase()} → <b>${BY[k].n.toLowerCase()}</b> ${bigText(prev[k])} → <b>${bigText(next[k])}</b>`);};
   land(src,null);
-  const seen=new Set([src]);let wave=[src],depth=0;
-  while(wave.length){
-    const nxt=[];depth++;
-    for(const a of wave)for(const b of FEEDS[a]){if(seen.has(b)||!changed.has(b))continue;seen.add(b);nxt.push(b);
-      const at=still?0:(depth-1)*HOP;hops.push({a,b,at});setTimeout(()=>land(b,a),at+(still?0:HOP-40));}
-    wave=nxt;
-  }
-  if(!still&&hops.length)surge(src,hops,seen,HOP,prev);
+  const sp=spread([src],b=>changed.has(b)),seen=new Set(Object.keys(sp.arr));
+  for(const h of sp.hops)setTimeout(()=>land(h.b,h.a),still?0:h.at+h.ms);
+  if(!still&&sp.hops.length)surge(src,sp,prev);
   for(const m of MODS)if(!seen.has(m.k)){paintTile(m);if(changed.has(m.k))flash(TILE[m.k].el);}
   if(open)paintPage(false);
 }
@@ -908,42 +908,35 @@ function fxFrame(t){
   FX.laps=FX.laps.filter(r=>t-r.t0<1100);   // a dot laps a panel as the change lands on it
   for(const r of FX.laps){const q=(t-r.t0)/1100;comet(g,r.path,r.path.len*(1-Math.pow(1-q,2)),r.path.len*.35*(1-q*.6),r.c,2.4);}
   FX.beams=FX.beams.filter(f=>t<f.end+500);
+  const heads=new Set();
   for(const f of FX.beams){
-    if(t<f.t0)continue;const q=(t-f.t0)/f.ms,P=f.path,fade=Math.max(0,Math.min(1,1-(t-f.end)/500));
-    if(q<1){g.shadowColor=f.c;g.shadowBlur=14*u;comet(g,P,P.len*q,Math.min(P.len*q,P.len*.7),f.c,4);g.shadowBlur=0;}
+    if(t<f.t0)continue;const q=Math.min(1,(t-f.t0)/f.ms),P=f.path,gone=P.len*q,fade=Math.max(0,Math.min(1,1-(t-f.end)/500));
     // the part already travelled stays lit until the whole chain has finished
-    g.shadowColor=f.c;g.shadowBlur=9*u;g.globalAlpha=.85*fade;g.strokeStyle=f.c;g.lineWidth=2.4*u;g.lineCap="round";g.beginPath();
-    for(let i=0;i<=40*Math.min(1,q);i++){const p=along(P,Math.min(P.len-.01,P.len*i/40));i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]);}
+    g.shadowColor=f.c;g.shadowBlur=9*u;g.globalAlpha=.85*fade;g.strokeStyle=f.c;g.lineWidth=2.4*u;g.lineCap="round";g.lineJoin="round";g.beginPath();g.moveTo(P.p[0][0],P.p[0][1]);
+    for(let i=1;i<P.p.length&&P.d[i-1]<gone;i++){const p=P.d[i]<=gone?P.p[i]:along(P,gone);g.lineTo(p[0],p[1]);}
     g.stroke();g.shadowBlur=0;
+    if(q<1){   // dots at the same spot are one dot: it splits where the routes part
+      const h=along(P,gone),key=Math.round(h[0])+","+Math.round(h[1]);if(heads.has(key))continue;heads.add(key);
+      g.shadowColor=f.c;g.shadowBlur=14*u;comet(g,P,gone,Math.min(gone,60*u),f.c,4);g.shadowBlur=0;
+    }
   }
   g.globalAlpha=1;
 }
 // a route as a line of points, running from panel a to panel b
-function routeLine(a,b){
-  const fwd=EDGE[a+">"+b],e=fwd||EDGE[b+">"+a],pts=[];if(!e)return null;
-  for(let i=0;i<=40;i++){const p=e.p.getPointAtLength(e.len*(fwd?i/40:1-i/40));pts.push([p.x,p.y]);}
-  return poly(pts);
-}
+function routeLine(a,b){const fwd=EDGE[a+">"+b],e=fwd||EDGE[b+">"+a];return e?poly(fwd?e.pts:[...e.pts].reverse()):null;}
 // a badge over a panel showing how far its main figure moved; a panel with no figure before counts from nothing
 function badge(k,prev){
   const T=TILE[k],a=prev[k],b=OUT[k],from=a&&!a.text?a.big:0;if(!b||b.text||b.big===from)return;
   const d=b.big-from,c=document.createElement("div");c.className="chip";c.textContent=(d>=0?"+":"")+gbp(d,Math.abs(d)<100?2:0);
   c.style.cssText=`left:${T.box.x+T.box.w/2}px;top:${T.box.y+T.box.h*.52}px;--z:${T.c}`;$("map").appendChild(c);setTimeout(()=>c.remove(),2600);
 }
-function surge(src,hops,seen,HOP,prev){
-  const map=$("map"),now=performance.now(),end=now+Math.max(...hops.map(h=>h.at))+HOP+1500,later=(f,ms)=>FX.timers.push(setTimeout(f,ms));
+function surge(src,sp,prev){
+  const map=$("map"),now=performance.now(),end=now+sp.last+1500,later=(f,ms)=>FX.timers.push(setTimeout(f,ms));
   FX.beams=[];FX.timers.forEach(clearTimeout);FX.timers=[];map.querySelectorAll(".chip").forEach(e=>e.remove());
-  const keep=new Set([...seen].map(k=>TILE[k].el)),all=[...map.querySelectorAll(".tile")];
+  const keep=new Set(Object.keys(sp.arr).map(k=>TILE[k].el)),all=[...map.querySelectorAll(".tile")];
   all.forEach(el=>el.classList.toggle("dim",!keep.has(el)));later(()=>all.forEach(el=>el.classList.remove("dim")),end-now);
-  badge(src,prev);FX.laps.push({path:TILE[src].ring,c:TILE[src].c,t0:now});
-  for(const h of hops){
-    const path=routeLine(h.a,h.b);if(!path)continue;
-    FX.beams.push({path,t0:now+h.at,ms:HOP,end,c:TILE[h.a].c});
-    later(()=>{
-      const T=TILE[h.b];T.el.classList.add("hit");setTimeout(()=>T.el.classList.remove("hit"),700);
-      FX.laps.push({path:T.ring,c:T.c,t0:performance.now()});badge(h.b,prev);
-    },h.at+HOP-40);
-  }
+  badge(src,prev);arrive(src);beams(sp.hops,end);
+  for(const h of sp.hops)later(()=>{arrive(h.b);badge(h.b,prev);},h.at+h.ms);
 }
 
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
@@ -963,8 +956,9 @@ function zoomOut(then){
     TILE[k].el.focus();
     // back on the map: show this page's links. The routes that feed it, then its routes onward.
     const into=MODS.filter(m=>FEEDS[m.k].includes(k)).map(m=>m.k);
-    into.forEach(a=>{flash(TILE[a].el);pulse(a,k,360);});
-    setTimeout(()=>ripple([k]),into.length&&!STILL()?340:0);
+    const hops=STILL()?[]:into.map(a=>{const path=routeLine(a,k);return {a,b:k,at:0,ms:path?Math.max(380,path.len/(.26*FX.u)):0,path};}),wait=Math.max(0,...hops.map(h=>h.ms));
+    into.forEach(a=>flash(TILE[a].el));beams(hops,performance.now()+wait+1200);
+    setTimeout(()=>ripple([k]),wait);
     say(`&gt; back on the map from <b>${full(BY[k]).toLowerCase()}</b>`);
   },STILL()?0:560);});
 }
