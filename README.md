@@ -78,7 +78,8 @@ The table lives in `LINK`. A carried field is `null` in the state; `eff(id, ctx)
 - `ZONES` places each panel on a four-by-four board, two-by-two for each territory. `wires()` draws the routes through the gaps between panels so they never cross one.
 - Movement is drawn on a canvas over the map (`fxFrame`). At rest two dots circle each territory. When a figure changes, `spread` works out which routes the change travels and when it reaches each panel. One dot runs down each line and splits where routes part, the route stays lit until the chain has finished, panels outside the chain fade back, and each panel reached shows a badge with how far its figure moved (`surge`).
 - The same animation, without badges or fading, plays at start-up and on returning to the map (`ripple`).
-- With reduced motion set on the phone, none of this runs and the territory borders are solid.
+- A page opens with the lit frame of the panel that was tapped, which dims after a few seconds to a faint green glow. Faint green characters fall behind the page (`rain`), drawn on a canvas under its content while the page is open.
+- With reduced motion set on the phone, none of this moves: the territory borders are solid, the page frame is dim from the start and the characters behind a page are still.
 
 ## Moving between screens
 
