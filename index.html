@@ -98,12 +98,14 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 @keyframes flow{to{stroke-dashoffset:-7}}
 /* ---- a page: one panel, zoomed in ---- */
 /* The page opens with the lit frame the chosen panel had on the map, in its territory's colour. After a few seconds the frame
-   settles to a panel's ordinary border, so going back to the map shows the same thing it shrinks into. */
-#detail{--pad:.55rem;position:absolute;inset:0;display:flex;flex-direction:column;gap:.28rem;padding:var(--pad);background:var(--panel);opacity:0;pointer-events:none;transition:opacity .22s;
-  border:1px solid var(--line);border-top:2px solid var(--z);border-radius:.5rem;box-shadow:inset 0 0 0 0 transparent,inset 0 0 0 transparent}
+   dims to the faint green glow panels have on the map, so going back to the map shows the same thing it shrinks into. */
+#detail{--pad:.55rem;--rest:inset 0 0 0 .06rem rgba(93,255,160,.18),inset 0 0 2.6rem rgba(93,255,160,.13);position:absolute;inset:0;isolation:isolate;display:flex;flex-direction:column;gap:.28rem;padding:var(--pad);
+  background:var(--panel);opacity:0;pointer-events:none;transition:opacity .22s;border:1px solid var(--dim);border-top:2px solid var(--z);border-radius:.5rem;box-shadow:var(--rest)}
 #detail.on{animation:settle 4s ease-in-out both}
-@keyframes settle{0%,55%{border-color:#fff;box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 1.5rem color-mix(in srgb,var(--z) 40%,transparent)}
-  100%{border-color:var(--line);border-top-color:var(--z);box-shadow:inset 0 0 0 0 transparent,inset 0 0 0 transparent}}
+@keyframes settle{0%,45%{border-color:#fff;box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 1.5rem color-mix(in srgb,var(--z) 40%,transparent)}
+  100%{border-color:var(--dim);border-top-color:var(--z);box-shadow:var(--rest)}}
+/* faint green characters fall behind the page */
+#rain{position:absolute;inset:0;width:100%;height:100%;z-index:-1;opacity:.17;border-radius:inherit;pointer-events:none}
 #detail.on{opacity:1;pointer-events:auto}
 /* The page's name is the panel's name as the zoom leaves it: the same words, size and place (--hs, --hx, --hy are set from the panel when the page opens). */
 .dhead{flex:none;border-bottom:1px solid var(--line);padding-bottom:.2rem}
@@ -960,6 +962,28 @@ function surge(src,sp,prev){
   for(const h of sp.hops)later(()=>{arrive(h.b);badge(h.b,prev);},h.at+h.ms);
 }
 
+// ---- faint characters falling behind an open page ----
+// Drawn a few times a second on a canvas under the page's content, and only while a page is open. With reduced motion it is one still frame.
+let rainTimer=0;
+function rain(){
+  clearInterval(rainTimer);
+  const cv=$("rain"),g=cv.getContext("2d"),rem=parseFloat(getComputedStyle(document.documentElement).fontSize),cell=rem*1.05,W=cv.clientWidth||$("view").clientWidth,H=cv.clientHeight||$("view").clientHeight;
+  cv.width=W;cv.height=H;
+  const cols=Math.ceil(W/cell),rows=Math.ceil(H/cell),drop=Array.from({length:cols},()=>Math.floor(Math.random()*rows*-1)),CH="0123456789£%+−$€¥01";
+  g.font=`600 ${cell*.95}px ui-monospace,monospace`;g.textBaseline="top";
+  const step=()=>{
+    g.fillStyle="rgba(8,19,12,.09)";g.fillRect(0,0,W,H);   // earlier characters fade into the page colour
+    for(let i=0;i<cols;i++){
+      const y=drop[i]*cell;g.fillStyle="#d8ffe8";g.fillText(CH[Math.floor(Math.random()*CH.length)],i*cell,y);
+      if(drop[i]>0){g.fillStyle="#5dffa0";g.fillText(CH[Math.floor(Math.random()*CH.length)],i*cell,y-cell);}
+      drop[i]=y>H&&Math.random()>.95?Math.floor(Math.random()*-12):drop[i]+1;
+    }
+  };
+  if(STILL()){for(let n=0;n<rows*2;n++)step();return;}
+  for(let n=0;n<rows;n++)step();   // the page opens with the rain already falling
+  rainTimer=setInterval(()=>{if(!open||!cv.isConnected||document.hidden){if(!open||!cv.isConnected)clearInterval(rainTimer);return;}step();},85);
+}
+
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
 function zoomIn(k,snap){
   if(busy)return;busy=!snap;open=k;tab=0;
@@ -1014,9 +1038,10 @@ function paintPage(fresh){
     d.style.setProperty("--z",`var(--z-${m.z})`);
     const at=TILE[open].nmAt,z=$("map").offsetWidth/TILE[open].box.w;
     if(at){d.style.setProperty("--hs",at.fs*z+"px");d.style.setProperty("--hx",at.x*z+"px");d.style.setProperty("--hy",at.y*z+"px");}
-    d.innerHTML=`<div class="dhead"><h1 aria-label="${full(m)}">${m.n}</h1></div>
+    d.innerHTML=`<canvas id="rain" aria-hidden="true"></canvas><div class="dhead"><h1 aria-label="${full(m)}">${m.n}</h1></div>
       <div class="dbig"><div class="dq">${m.q}</div><div class="cap" id="dcap"></div><div class="fig" id="dfig"></div><div class="meter" id="dmeter"></div><div class="dwarn" id="dwarn"></div></div>
       <div class="tabs" role="tablist" id="dtabs"></div><div class="pane" id="dpane" role="tabpanel"></div>`;
+    rain();
   }
   $("dcap").textContent=o?(o.unit||m.u):m.empty;
   if(!o||o.text){$("dfig").textContent=bigText(o);LAST.dfig=null;}else roll($("dfig"),o.big,x=>(o.sign&&x>=0?"+":"")+gbp(x,o.dp||0),"dfig");
