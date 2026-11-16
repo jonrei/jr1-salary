@@ -1,8 +1,8 @@
 // Opens the app in a real browser at common phone sizes and checks the rules it is built on:
-// every screen fits with no scrolling in either direction, the page makes no requests outside
-// the site, and the only thing kept in the browser is the one "jr1-money" key.
-// Run with: npm run check:layout   (needs Playwright: npx playwright install chromium)
-// Set SHOTS=some/folder to also save a screenshot of each size.
+// the map and every page fit with no scrolling, the main section of each page shows everything without scrolling
+// (tables and help scroll inside their own box), the page makes no requests outside the site, the only thing kept
+// in the browser is the one "jr1-money" key, and a carried figure never changes the calculator it came from.
+// Run with: npm run check:layout   (needs Playwright). Set SHOTS=some/folder to also save screenshots.
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -11,84 +11,23 @@ const { chromium } = require("playwright");
 const ROOT = path.join(__dirname, "..");
 const TYPES = { ".html": "text/html", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png", ".js": "text/javascript", ".webmanifest": "application/manifest+json" };
 const SIZES = [[320, 568], [360, 560], [360, 640], [360, 700], [375, 667], [390, 664], [412, 780], [430, 800], [480, 900]];
+// every calculator filled in, at its fullest: warnings, a bonus, a lump sum, a late State Pension, long figures
+const FULL = { salary: 118000, eePct: 8, erPct: 6, bonusValue: 9000, loan: "p2", children: 2, pensionMode: "target", netTarget: 5100,
+  sac: [{ name: "Cycle to work", amount: 1200, basis: "yearly" }], post: [{ name: "Union", amount: 150, basis: "monthly" }],
+  cmpB: 131500, bgNeeds: 55, bgWants: 25, ppAge: 24, ppRetire: 60, ppPot: 1250000, ppMonthly: 8000, ppDraw: 4.5, ppDdAge: 58, spOn: true, spAge: 68, lsType: "max",
+  ciStart: 125000, ciYears: 40, ciInfl: 2.5, sgTarget: 250000, sgYears: 12, mgPrice: 1450000, mgDeposit: 250000, mgRate: 5.4, mgYears: 30, mgOver: 500, sdBuyer: "extra",
+  lnAmount: 25000, lnRate: 9.9, lnYears: 7, dbBalance: 12500, dbRate: 29.9, dbPay: 350, dbExtra: 100, dvMode: "director", dvDivs: 60000,
+  cgSold: 480000, cgPaid: 210000, cgCosts: 9500, ihEstate: 2400000, ihKids: true, ihSpouse: true };
 
-// States to check: the front page; the Take-home calculator empty, with a plain salary and at its fullest
-// (every legend row, a warning and a solved target); the Pension pot calculator empty and at its fullest
-// (a lump sum, a drawdown rate of the user's own, a late State Pension); and every other calculator filled in.
-const go = async (p, name) => { await p.click(`[data-go="${name}"]`); };
-const salary = async (p) => { await go(p, "take-home"); await p.fill("#salary", "118000"); await p.click("#back"); };
-const STATES = {
-  home: async () => {},
-  empty: async (p) => { await go(p, "take-home"); },
-  simple: async (p) => { await go(p, "take-home"); await p.fill("#salary", "42000"); },
-  full: async (p) => {
-    await go(p, "take-home"); await p.fill("#salary", "118000");
-    await p.click('[data-open="shBonus"]'); await p.fill("#bonusValue", "9000"); await p.click("#shBonus .done");
-    await p.click('[data-open="shSac"]'); await p.click("#addC2W"); await p.fill("#sac0a", "1200"); await p.click("#shSac .done");
-    await p.click('[data-open="shPost"]'); await p.click("#addPost"); await p.fill("#post0a", "150"); await p.click("#shPost .done");
-    await p.click('[data-open="shMore"]'); await p.selectOption("#loan", "p2"); await p.fill("#children", "2"); await p.click("#shMore .done");
-    await p.fill("#netTarget", "5100"); await p.click("#optBtn");
-  },
-  potEmpty: async (p) => { await go(p, "pension"); },
-  potFull: async (p) => {
-    await go(p, "take-home"); await p.fill("#salary", "118000"); await p.click("#back"); await go(p, "pension");
-    await p.fill("#ppAge", "24"); await p.fill("#ppRetire", "60"); await p.fill("#ppPot", "1250000"); await p.fill("#ppMonthly", "8000");
-    await p.fill("#ppDraw", "4.5"); await p.fill("#ppDdAge", "58"); await p.click("#ppAge");   // over both tax relief limits, so both warnings show
-    await p.click('[data-open="shLump"]'); await p.click("#lsMax"); await p.click("#shLump .done");
-    await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
-  },
-  // the tallest the pension screen gets: a payment carried from Take-home pay (so the "dashed boxes" line shows),
-  // high enough to be held by the tax relief limits (so the warning shows too), and a drawdown rate of the user's own
-  potTallest: async (p) => {
-    await go(p, "take-home"); await p.fill("#salary", "1180000"); await p.click("#back"); await go(p, "pension");
-    await p.fill("#ppAge", "45"); await p.fill("#ppRetire", "67"); await p.fill("#ppPot", "1250000");
-    await p.fill("#ppDraw", "7.5"); await p.fill("#ppDdAge", "57"); await p.click("#ppAge");
-    await p.click('[data-open="shLump"]'); await p.click("#lsMax"); await p.click("#shLump .done");
-    await p.click('[data-open="shSP"]'); await p.fill("#spAge", "68"); await p.click("#shSP .done");
-    // tapping a row of the drawdown table opens the year-by-year popup, which marks the year the State Pension starts
-    await p.click('#ddTbl [data-rate="8"]');
-    if (!(await p.textContent("#ddYears")).includes("State Pension starts at 68")) throw new Error("the year-by-year popup does not show the State Pension starting");
-    await p.click("#ddUse"); if ((await p.inputValue("#ppDraw")) !== "8") throw new Error("the popup's button did not set the drawdown rate");
-  },
-  ciEmpty: async (p) => { await go(p, "compound"); },
-  ciFull: async (p) => {
-    await go(p, "compound"); await p.fill("#ciStart", "1250000"); await p.fill("#ciPay", "2500"); await p.click("#ciWeekly");
-    await p.fill("#ciYears", "40"); await p.fill("#ciRise", "3");
-    await p.click('[data-open="shCiOpt"]'); await p.fill("#ciInfl", "2.5"); await p.selectOption("#ciComp", "daily"); await p.click("#shCiOpt .done");
-  },
-  // the other calculators, each filled in with large figures; a salary is entered first so carried figures show too
-  compare: async (p) => { await salary(p); await go(p, "compare"); await p.fill("#cmpB", "1250000"); },
-  convert: async (p) => { await salary(p); await go(p, "convert"); await p.selectOption("#cvPer", "hour"); },
-  budget: async (p) => { await salary(p); await go(p, "budget"); },
-  goal: async (p) => { await go(p, "goal"); await p.fill("#sgTarget", "1250000"); await p.fill("#sgStart", "250000"); await p.fill("#sgRate", "4.5"); await p.fill("#sgYears", "30"); },
-  mortgage: async (p) => { await go(p, "mortgage"); await p.fill("#mgPrice", "1250000"); await p.fill("#mgDeposit", "250000"); await p.fill("#mgOver", "1500"); },
-  stampDuty: async (p) => { await go(p, "mortgage"); await p.fill("#mgPrice", "2250000"); await p.click("#mgSd"); await p.click('[data-set="sdBuyer:extra"]'); },
-  loan: async (p) => { await go(p, "loan"); await p.fill("#lnAmount", "125000"); await p.fill("#lnYears", "7"); },
-  debt: async (p) => { await go(p, "debt"); await p.fill("#dbBalance", "125000"); await p.fill("#dbPay", "2500"); await p.fill("#dbExtra", "500"); },
-  selfEmployed: async (p) => { await salary(p); await go(p, "self-employed"); await p.click('[data-set="dvMode:director"]'); await p.fill("#dvDivs", "250000"); },
-  capitalGains: async (p) => { await salary(p); await go(p, "capital-gains"); await p.fill("#cgSold", "1250000"); await p.fill("#cgPaid", "250000"); await p.fill("#cgCosts", "12500"); },
-  inheritance: async (p) => { await go(p, "inheritance"); await p.fill("#ihEstate", "2250000"); await p.fill("#ihHome", "850000"); await p.click('[data-chk="ihSpouse"]'); },
-  // a figure carries to another calculator, can be changed there, and the change never reaches its source
-  linking: async (p) => {
-    await salary(p); await go(p, "compare");
-    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("the salary did not carry over to Compare salaries");
-    await p.fill("#cmpA", "90000"); await p.fill("#cmpB", "95000"); await p.click("#back"); await go(p, "take-home");
-    if ((await p.inputValue("#salary")) !== "118,000") throw new Error("changing a carried figure altered its source");
-    await p.click("#back"); await go(p, "compare"); await p.fill("#cmpA", ""); await p.click("#cmpTbl");
-    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("emptying a carried field did not link it again");
-    await p.fill("#cmpA", "1250000"); await p.click("#cmpTbl"); await p.click("#scCmp .stepper.over .rst");
-    if ((await p.inputValue("#cmpA")) !== "118,000") throw new Error("the reset button did not put the carried figure back");
-    await p.fill("#cmpA", "1250000"); await p.click("#cmpTbl");   // leave it changed, so the screen is checked with the reset button showing
-  },
-  // figures on the front page, and still there after the page is loaded again
-  homeFull: async (p) => {
-    await go(p, "take-home"); await p.fill("#salary", "1180000"); await p.click("#back");
-    await go(p, "pension"); await p.fill("#ppAge", "40"); await p.fill("#ppPot", "2500000"); await p.click("#back");
-    await go(p, "compound"); await p.fill("#ciStart", "1250000"); await p.click("#back");
-    await go(p, "mortgage"); await p.fill("#mgPrice", "1250000"); await p.click("#back");
-    await p.reload();
-    if (!(await p.textContent("#h-pay")).includes("£")) throw new Error("figures were not kept after a reload");
-  },
+const fit = () => {
+  const de = document.documentElement, d = document.getElementById("detail"), on = d.classList.contains("on"), box = (on ? d : document.getElementById("stage")).getBoundingClientRect();
+  const pane = document.getElementById("dpane"), inner = pane && pane.classList.contains("scroll") ? pane : null;
+  const out = [...(on ? d : document.getElementById("map")).querySelectorAll("*")].filter((e) => !(inner && inner.contains(e) && e !== inner) && !e.closest("svg") && e.offsetWidth > 0)
+    .filter((e) => { const r = e.getBoundingClientRect(); return r.right > box.right + 0.5 || r.left < box.left - 0.5 || r.bottom > innerHeight + 0.5; }).map((e) => e.id || e.className || e.tagName);
+  // text cut short inside a row of the main section
+  const cut = on && !inner ? [...pane.querySelectorAll(".lab,.val,.k,.v,.nm,.bg")].filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent.trim().slice(0, 30)) : [];
+  return { page: Math.max(de.scrollHeight - innerHeight, de.scrollWidth - innerWidth), detail: on ? d.scrollHeight - d.clientHeight : 0, pane: pane && !inner && on ? pane.scrollHeight - pane.clientHeight : 0,
+    out: [...new Set(out)], cut, stored: Object.keys(localStorage).filter((k) => k !== "jr1-money").length + sessionStorage.length + document.cookie.length };
 };
 
 (async () => {
@@ -98,35 +37,90 @@ const STATES = {
     res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" });
     fs.createReadStream(file).pipe(res);
   }).listen(0);
-  const origin = "http://127.0.0.1:" + server.address().port;
+  const origin = "http://127.0.0.1:" + server.address().port, url = origin + "/";
   const browser = await chromium.launch();
   const problems = [];
-  for (const [w, h] of SIZES) for (const [name, setup] of Object.entries(STATES)) {
-    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: process.env.SHOTS ? 2 : 1 });
-    const tag = `${w}x${h} ${name}`;
+  const watch = (page, tag) => {
     page.on("console", (m) => { if (m.type() === "error") problems.push(`${tag}: console error: ${m.text()}`); });
     page.on("pageerror", (e) => problems.push(`${tag}: script error: ${e.message}`));
     page.on("request", (r) => { if (!r.url().startsWith(origin)) problems.push(`${tag}: request outside the site: ${r.url()}`); });
-    await page.goto(origin + "/");
-    await setup(page);
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(300);
-    const m = await page.evaluate(() => {
-      const app = document.getElementById("app"), right = app.getBoundingClientRect().right;
-      const wide = [...app.querySelectorAll("*")].filter((e) => e.getBoundingClientRect().right > right + 0.5).map((e) => e.id || e.className || e.tagName);
-      const scr = app.querySelector(".screen:not([hidden])"), kids = [...scr.children].filter((e) => e.offsetHeight > 0);
-      const spare = scr.clientHeight - kids.reduce((t, e) => t + e.offsetHeight, 0) - parseFloat(getComputedStyle(scr).rowGap) * (kids.length - 1);
-      return { spare: Math.round(spare), over: app.scrollHeight - app.clientHeight, side: document.documentElement.scrollWidth - innerWidth, wide,
-        stored: Object.keys(localStorage).filter((k) => k !== "jr1-money").length + sessionStorage.length + document.cookie.length, rem: parseFloat(getComputedStyle(document.documentElement).fontSize) };
-    });
-    if (m.over > 0) problems.push(`${tag}: main screen is ${m.over}px too tall, so it scrolls`);
-    if (m.side > 0 || m.wide.length) problems.push(`${tag}: content runs off the side (${m.wide.join(", ") || m.side + "px"})`);
+  };
+  const report = (tag, m) => {
+    if (m.page > 0) problems.push(`${tag}: the screen scrolls by ${m.page}px`);
+    if (m.detail > 0) problems.push(`${tag}: the page is ${m.detail}px too tall`);
+    if (m.pane > 0) problems.push(`${tag}: the main section is ${m.pane}px too tall`);
+    if (m.out.length) problems.push(`${tag}: content runs off the screen (${m.out.slice(0, 5).join(", ")})`);
+    if (m.cut.length) problems.push(`${tag}: text is cut short (${m.cut.slice(0, 5).join(" | ")})`);
     if (m.stored) problems.push(`${tag}: something was stored outside the one "jr1-money" key`);
-    if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `${w}x${h}-${name}.png`) });
-    console.log(`${tag}: ${m.over > 0 ? "TOO TALL by " + m.over + "px" : "fits, " + m.spare + "px spare"} (1rem = ${m.rem.toFixed(1)}px)`);
+  };
+  for (const [w, h] of SIZES) for (const state of ["empty", "full"]) {
+    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: process.env.SHOTS ? 2 : 1, reducedMotion: "reduce" });
+    const tag = `${w}x${h} ${state}`; watch(page, tag);
+    await page.goto(url);
+    if (state === "full") { await page.evaluate((f) => { Object.assign(S, f); save(); }, FULL); await page.reload(); }
+    await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(150);
+    report(`${tag} map`, await page.evaluate(fit));
+    if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `next-${w}x${h}-${state}-map.png`) });
+    let count = 1;
+    for (const hash of await page.evaluate(() => MODS.map((m) => m.hash))) {
+      await page.evaluate((x) => { location.hash = x; }, hash); await page.waitForSelector("#detail.on");
+      const tabs = await page.$$eval("#dtabs button", (b) => b.map((x) => x.textContent));
+      for (let i = 0; i < tabs.length; i++) {
+        if (i) await page.click(`#dtabs [data-tab="${i}"]`);
+        await page.waitForTimeout(20);
+        report(`${tag} ${hash} ${tabs[i]}`, await page.evaluate(fit)); count++;
+        if (process.env.SHOTS && (i === 0 || state === "full")) await page.screenshot({ path: path.join(process.env.SHOTS, `next-${w}x${h}-${state}-${hash}-${tabs[i]}.png`) });
+      }
+      await page.evaluate(() => { location.hash = ""; }); await page.waitForSelector("#detail:not(.on)");
+    }
+    console.log(`${tag}: ${count} screens checked`);
     await page.close();
   }
+
+  // ---- behaviour, at one size ----
+  const page = await browser.newPage({ viewport: { width: 390, height: 664 }, reducedMotion: "reduce" }); watch(page, "behaviour");
+  const need = (ok, what) => { if (!ok) problems.push(`behaviour: ${what}`); };
+  const openPage = async (hash) => { await page.evaluate((x) => { location.hash = x; }, hash); await page.waitForSelector(hash ? "#detail.on" : "#detail:not(.on)"); };
+  const type = async (id, text) => { await page.click(`[data-edit="${id}"]`); await page.fill(".inrow input", text); await page.keyboard.press("Enter"); };
+  const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("jr1-money") || "null"));
+  await page.goto(url); await page.evaluate(() => document.fonts.ready);
+  need((await state()) === null, "something was stored before anything was entered");
+  await openPage("take-home"); await type("salary", "42000");
+  need((await page.textContent("#dfig")).includes("£"), "typing a salary gave no take-home figure");
+  need((await state()).salary === 42000, "the salary was not kept in the browser");
+  await page.click('[data-step="salary"][data-d="1"]');
+  need((await state()).salary === 43000, "the + button did not raise the salary");
+  need(await page.evaluate(() => document.querySelector(".inrow input") === null && [...document.querySelectorAll(".val")].every((e) => e.tagName === "BUTTON")), "a typing field was left open");
+  await openPage("budget");
+  need(await page.$eval('[data-edit="bgIncome"]', (e) => e.classList.contains("carried") && e.textContent.includes("£")), "Budget did not carry the take-home figure");
+  await type("bgIncome", "2000");
+  let s = await state();
+  need(s.bgIncome === 2000 && s.salary === 43000, "typing over a carried figure changed its source");
+  await page.click('[data-rs="bgIncome"]');
+  need((await state()).bgIncome === null, "the reset button did not put the carried figure back");
+  await openPage(""); await page.reload(); await page.evaluate(() => document.fonts.ready);
+  need((await page.textContent("#map .tile .bg")).includes("£"), "figures were not shown on the map after a reload");
+  await page.goto(url + "#mortgage"); await page.waitForSelector("#detail.on");
+  need((await page.textContent("#detail h1")) === "MORTGAGE", "opening a page by its address did not work");
+  await page.goBack(); await page.waitForSelector("#detail:not(.on)");
+  await page.close();
+
+  // ---- the linking animation, with motion on ----
+  const live = await browser.newPage({ viewport: { width: 390, height: 664 } }); watch(live, "animation");
+  await live.goto(url); await live.evaluate(() => { Object.assign(S, { salary: 42000, ppAge: 35 }); save(); }); await live.reload();
+  await live.evaluate(() => document.fonts.ready); await live.waitForTimeout(400);
+  await live.click("#sim"); await live.waitForTimeout(700);
+  const mid = await live.evaluate(() => ({ dim: document.querySelectorAll(".tile.dim").length, chips: document.querySelectorAll(".chip").length,
+    lit: [...document.getElementById("fx").getContext("2d").getImageData(0, 0, 400, 400).data].some((x) => x > 0) }));
+  need(mid.dim > 0, "panels outside the chain did not fade back during a change");
+  need(mid.chips > 0, "no panel showed how far its figure moved");
+  need(mid.lit, "nothing was drawn on the map canvas");
+  await live.waitForTimeout(3500);
+  need(await live.evaluate(() => document.querySelectorAll(".tile.dim,.chip").length === 0), "the map did not return to rest after a change");
+  report("animation map", await live.evaluate(fit));
+  await live.close();
+
   await browser.close(); server.close();
   if (problems.length) { console.error("\n" + problems.join("\n")); process.exit(1); }
-  console.log("\nAll screens fit with no scrolling, make no outside requests and store nothing beyond the one key.");
+  console.log("\nThe map and every page fit with no scrolling, make no outside requests and store nothing beyond the one key.");
 })();

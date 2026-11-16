@@ -402,35 +402,15 @@ test("the page keeps its promise: figures stay in the browser, nothing is sent, 
   const uses = code.match(/localStorage\.\w+\([^)]*/g) || [];
   assert.ok(uses.length > 0 && uses.every((u) => /^localStorage\.(getItem|setItem|removeItem)\(KEY/.test(u)), `unexpected storage use: ${uses.join(" | ")}`);
   const urls = html.match(/https?:\/\/[^\s"'<>)]+/g) || [];
-  const outside = urls.filter((u) => !u.startsWith("https://money.jr1.com/"));
+  const outside = urls.filter((u) => !u.startsWith("https://money.jr1.com/") && u !== "http://www.w3.org/2000/svg");
   assert.deepEqual(outside, [], "links to other sites");
   assert.match(html, /connect-src 'none'/, "content security policy blocks sending data");
 });
 
-// ---- the new map interface (next.html) ----
-const nextHtml = readFileSync(new URL("../next.html", import.meta.url), "utf8");
-const nextCode = nextHtml.match(/<script>([\s\S]*?)<\/script>/)[1];
-const MARK = "/* ---------- interface ---------- */";
-const squash = (s) => s.trim().replace(/^\/\* -+ maths:.*\n/, "").trim();
-
-test("next.html uses exactly the same maths as index.html", () => {
-  assert.equal(squash(nextCode.slice(0, nextCode.indexOf("// ---- what is kept in the browser ----"))), code.slice(0, code.indexOf(MARK)).trim());
-});
-
-test("next.html keeps the same promise: one storage key, nothing sent, nothing loaded from elsewhere", () => {
-  for (const banned of ["sessionStorage", "indexedDB", "document.cookie", "fetch(", "XMLHttpRequest", "sendBeacon", "WebSocket"])
-    assert.ok(!nextCode.includes(banned), `script uses ${banned}`);
-  const uses = nextCode.match(/localStorage\.\w+\([^)]*/g) || [];
-  assert.ok(uses.length > 0 && uses.every((u) => /^localStorage\.(getItem|setItem|removeItem)\(KEY/.test(u)), `unexpected storage use: ${uses.join(" | ")}`);
-  const urls = (nextHtml.match(/https?:\/\/[^\s"'<>)]+/g) || []).filter((u) => !u.startsWith("https://money.jr1.com/") && u !== "http://www.w3.org/2000/svg");
-  assert.deepEqual(urls, [], "links to other sites");
-  assert.match(nextHtml, /connect-src 'none'/, "content security policy blocks sending data");
-  assert.match(nextCode, /const KEY="jr1-money"/, "the same storage key as the classic view");
-});
-
-test("next.html: each page shows the figure the maths gives, and a carried figure follows its source", () => {
+// ---- the interface ----
+test("each page shows the figure the maths gives, and a carried figure follows its source", () => {
   const c2 = vm.createContext({});
-  vm.runInContext(nextCode + "\n;globalThis.run2=(o)=>{S=Object.assign(blank(),o);const out=model();return {out,ctx:CTX,eff:(id)=>eff(id,CTX)};};", c2);
+  vm.runInContext(code + "\n;globalThis.run2=(o)=>{S=Object.assign(blank(),o);const out=model();return {out,ctx:CTX,eff:(id)=>eff(id,CTX)};};", c2);
   const o = { salary: 30000, eePct: 5, erPct: 3, mgPrice: 250000, mgDeposit: 50000, mgRate: 5, mgYears: 25 };
   const r = c2.run2(o), C = calc(o);
   near(r.out.pay.big, C.typical, "take-home a month");

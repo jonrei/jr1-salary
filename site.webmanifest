@@ -1,14 +1,14 @@
 {
   "name": "JR1 Money",
   "short_name": "JR1 Money",
-  "description": "Take-home pay, pension pot and compound interest calculators. Your figures stay in your browser and are never sent anywhere.",
+  "description": "UK money calculators on one linked map. Your figures stay in your browser and are never sent anywhere.",
   "lang": "en-GB",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f3f5f4",
-  "theme_color": "#0f6b4f",
+  "background_color": "#040906",
+  "theme_color": "#040906",
   "icons": [
     {
       "src": "icons/icon-192.png",
