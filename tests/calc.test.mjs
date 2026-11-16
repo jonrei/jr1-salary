@@ -427,3 +427,14 @@ test("each page shows the figure the maths gives, and a carried figure follows i
   near(own.eff("bgIncome"), 1000, "own Budget income");
   near(own.out.pay.big, C.typical, "take-home unchanged");
 });
+
+test("Take home, bonus section: shows what the bonus adds to the bank", () => {
+  const c2 = vm.createContext({});
+  vm.runInContext(code + "\n;globalThis.run2=(o)=>{S=Object.assign(blank(),o);return model();};", c2);
+  // £30,000 with no pension and a £1,000 bonus, all in the basic rate band: 20% tax and 8% NI come off, so £720 reaches the bank
+  const rows = c2.run2({ salary: 30000, eePct: 0, erPct: 0, bonusValue: 1000 }).pay.more.BONUS;
+  near(rows[0][1], 1000, "bonus before tax");
+  near(rows[rows.length - 2][1], 280, "tax and NI on the bonus");
+  near(rows[rows.length - 1][1], 720, "bonus in the bank");
+  assert.equal(c2.run2({ salary: 30000 }).pay.more.BONUS.length, 0, "no rows without a bonus");
+});

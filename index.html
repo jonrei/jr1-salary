@@ -48,7 +48,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #view{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
 /* ---- the map ---- */
 #map{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:1.5rem 1.35rem;padding-top:.45rem;transform-origin:0 0;
-  transition:transform .55s cubic-bezier(.7,0,.2,1);
+  transition:transform .36s cubic-bezier(.7,0,.2,1);
   background-image:linear-gradient(to right,rgba(47,168,102,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(47,168,102,.09) 1px,transparent 1px);background-size:2.4rem 2.4rem}
 #map.gone{visibility:hidden}
 #map.snap{transition:none}
@@ -78,6 +78,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #map.live .zone{border-color:transparent}
 #map.live .tile{transition:border-color .3s,box-shadow .3s,opacity .35s,transform .25s}
 .tile.dim{opacity:.22}
+.tile.pick,#map.live .tile.pick{transition:none;border-color:#fff;box-shadow:0 0 0 .12rem var(--z),0 0 1.6rem var(--z),inset 0 0 1rem color-mix(in srgb,var(--z) 35%,transparent)}
 .tile.hit{transform:scale(1.045);border-color:var(--hot);box-shadow:0 0 1.2rem color-mix(in srgb,var(--z) 70%,transparent),inset 0 0 .8rem color-mix(in srgb,var(--z) 25%,transparent)}
 .chip{position:absolute;z-index:3;transform:translate(-50%,-50%);padding:.1rem .35rem;border:1px solid var(--z);border-radius:.25rem;background:var(--bg);color:var(--z);font-size:1.05rem;font-weight:600;white-space:nowrap;
   box-shadow:0 0 .8rem color-mix(in srgb,var(--z) 60%,transparent);pointer-events:none;animation:chip 2.6s ease-out both}
@@ -127,6 +128,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .out .k{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .out .dots{flex:1 1 1rem;min-width:.5rem;overflow:hidden;color:var(--line);white-space:nowrap}
 .out .v{flex:none;color:var(--hot);font-weight:600;white-space:nowrap}
+.out.key{font-size:1.15rem;font-weight:600;border-top:1px dashed var(--line);margin-top:.2rem;padding-top:.2rem}
+.out.key .k{color:var(--hot)}
 /* links to other pages: big, labelled, and plainly something to tap */
 .links{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.4rem}
 .lnk{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:.5rem;min-height:3.2rem;text-align:left;background:var(--panel);
@@ -606,7 +609,9 @@ const MODS=[
     const LINES=[["basic","Basic pay"],R.bg?["bonus","Bonus"]:null,S.method==="sacrifice"?["sacPen","less Pension (sacrifice)"]:null,sch?["sch","less Salary sacrifice"]:null,bsac?["bsac","less Bonus into pension"]:null,
       ["cash","Pay after sacrifice",1],S.method==="netpay"?["netpayPen","less Pension (before tax)"]:null,["tax","less Income tax"],["ni","less National Insurance"],loan?["loan","less Student loan"]:null,
       S.method==="ras"?["rasNet","less Pension (after tax)"]:null,post?["post","less After-tax deductions"]:null,["net","Take-home pay",1],["emp","Employer pension"],["penTotal","Total into pension"]].filter(Boolean);
-    return {big:K.typical,pct:K.pct,meter:K.net/K.gross,warn,
+    // what the bonus adds to the year's take-home, shown under the bonus inputs
+    const bonus=R.bg?[["bonus before tax",R.bg],bsac?["of it into pension",bsac]:null,["tax, NI and other deductions",R.bg-bsac-K.bonusNet],["bonus in your bank",K.bonusNet,1]].filter(Boolean):[];
+    return {big:K.typical,pct:K.pct,meter:K.net/K.gross,warn,more:{BONUS:bonus},
       rows:[["income tax /mo",tax/12],["nat. insurance /mo",ni/12],["into pension /mo",penAll/12],R.bg?["bonus take-home",K.bonusNet]:loan?["student loan /mo",loan/12]:["kept of next £100",gbp(K.keep,0)],["take-home /yr",K.net]],
       tables:{MONTHS:{head:["",...MONTHS,"Total"],rows:LINES.map(([k,label,key])=>({c:[label,...R.rows.map(r=>gbp(r[k],2)),gbp(sum(k),2)],key}))}}};
   }},
@@ -945,10 +950,14 @@ function surge(src,sp,prev){
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
 function zoomIn(k,snap){
   if(busy)return;busy=!snap;open=k;tab=0;
-  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w;
-  map.classList.toggle("snap",!!snap);map.style.transform=`translate(${-b.x*s}px,${-b.y*s}px) scale(${s})`;
+  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w,quick=snap||STILL(),el=TILE[k].el;
+  // the chosen panel's border lights at once and holds for a moment, then the camera moves in: about half a second in all
+  const go=()=>{
+    map.classList.toggle("snap",!!snap);map.style.transform=`translate(${-b.x*s}px,${-b.y*s}px) scale(${s})`;
+    setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");el.classList.remove("pick");busy=false;const bk=$("detail").querySelector(".back");if(bk)bk.focus();},quick?0:350);
+  };
   paintPage(true);document.title=full(BY[k]).toLowerCase().replace(/^./,ch=>ch.toUpperCase())+" · JR1 Money";
-  setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");busy=false;const bk=$("detail").querySelector(".back");if(bk)bk.focus();},snap||STILL()?0:520);
+  if(quick)go();else{el.classList.add("pick");setTimeout(go,110);}
 }
 function zoomOut(then){
   if(busy||!open)return;busy=true;const map=$("map"),k=open;
@@ -1005,6 +1014,8 @@ function paintPage(fresh){
   if(T.fields){
     const shown=T.fields.filter(f=>!f.show||f.show());
     let h=`<div><div class="sec">${tab?T.name:"INPUT"} · TAP A FIGURE TO TYPE</div>${shown.map(f=>inputRow(f,o)).join("")}</div>`;
+    const more=tab&&m.tabs[tab][0]==="BONUS"?(o&&o.more&&o.more.BONUS)||[]:null;   // a section may show results of its own under its inputs
+    if(more)h+=`<div><div class="sec">WHAT YOU RECEIVE</div>${more.length?more.map(r=>`<div class="out${r[2]?" key":""}"><span class="k">${esc(r[0])}</span><span class="dots">${dots}</span><span class="v">${esc(gbp(r[1]))}</span></div>`).join(""):`<span class="none">Enter a bonus to see what reaches your bank.</span>`}</div>`;
     if(!tab){   // the main section also shows the results and the links to other pages
       h+=`<div><div class="sec">OUTPUT</div>${o?o.rows.filter(Boolean).map((r,i)=>`<div class="out"><span class="k">${esc(r[0])}</span><span class="dots">${dots}</span><span class="v" data-row="${i}"></span></div>`).join(""):`<span class="none">${esc(m.empty)} to see the result.</span>`}</div>`;
       const from=[...new Set(fields(m).filter(f=>LINK[f.id]).map(f=>LINK[f.id].from))],many=from.length+FEEDS[m.k].filter(k=>!from.includes(k)).length>4,link=(k,dir)=>`<button type="button" class="lnk" data-k="${k}" data-dir="${dir}" style="--z:var(--z-${BY[k].z})" aria-label="Open ${full(BY[k])}">

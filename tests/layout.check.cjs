@@ -12,7 +12,7 @@ const ROOT = path.join(__dirname, "..");
 const TYPES = { ".html": "text/html", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png", ".js": "text/javascript", ".webmanifest": "application/manifest+json" };
 const SIZES = [[320, 568], [360, 560], [360, 640], [360, 700], [375, 667], [390, 664], [412, 780], [430, 800], [480, 900]];
 // every calculator filled in, at its fullest: warnings, a bonus, a lump sum, a late State Pension, long figures
-const FULL = { salary: 118000, eePct: 8, erPct: 6, bonusValue: 9000, loan: "p2", children: 2, pensionMode: "target", netTarget: 5100,
+const FULL = { salary: 118000, eePct: 8, erPct: 6, bonusValue: 9000, bsType: "pct", bsValue: 20, loan: "p2", children: 2, pensionMode: "target", netTarget: 5100,
   sac: [{ name: "Cycle to work", amount: 1200, basis: "yearly" }], post: [{ name: "Union", amount: 150, basis: "monthly" }],
   cmpB: 131500, bgNeeds: 55, bgWants: 25, ppAge: 24, ppRetire: 60, ppPot: 1250000, ppMonthly: 8000, ppDraw: 4.5, ppDdAge: 58, spOn: true, spAge: 68, lsType: "max",
   ciStart: 125000, ciYears: 40, ciInfl: 2.5, sgTarget: 250000, sgYears: 12, mgPrice: 1450000, mgDeposit: 250000, mgRate: 5.4, mgYears: 30, mgOver: 500, sdBuyer: "extra",
