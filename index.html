@@ -97,11 +97,14 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #wires circle{fill:var(--hot)}
 @keyframes flow{to{stroke-dashoffset:-7}}
 /* ---- a page: one panel, zoomed in ---- */
-#detail{position:absolute;inset:0;display:flex;flex-direction:column;gap:.45rem;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .22s}
+/* The page keeps the lit frame the chosen panel had on the map, in its territory's colour, so the panel and its page read as one thing. */
+#detail{--pad:.55rem;position:absolute;inset:0;display:flex;flex-direction:column;gap:.28rem;padding:var(--pad);background:var(--panel);opacity:0;pointer-events:none;transition:opacity .22s;
+  border:1px solid #fff;border-radius:.5rem;box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 1.5rem color-mix(in srgb,var(--z) 40%,transparent);animation:frame 3.2s ease-in-out infinite}
+@keyframes frame{50%{box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 .7rem color-mix(in srgb,var(--z) 22%,transparent)}}
 #detail.on{opacity:1;pointer-events:auto}
 /* The page's name is the panel's name as the zoom leaves it: the same words, size and place (--hs, --hx, --hy are set from the panel when the page opens). */
 .dhead{flex:none;border-bottom:1px solid var(--line);padding-bottom:.2rem}
-.dhead h1{margin:var(--hy,0) 0 0 var(--hx,0);font-size:var(--hs,1.9rem);font-weight:600;letter-spacing:-.035em;word-spacing:-.3em;line-height:1.15;color:var(--z);white-space:nowrap}
+.dhead h1{margin:max(0px,calc(var(--hy,0px) - var(--pad) - 1px)) 0 0 max(0px,calc(var(--hx,0px) - var(--pad) - 1px));font-size:var(--hs,1.9rem);font-weight:600;letter-spacing:-.035em;word-spacing:-.3em;line-height:1.15;color:var(--z);white-space:nowrap}
 .back{flex:none;display:flex;align-items:center;gap:.4rem;min-height:3rem;padding:0 1rem;border-radius:.3rem;background:var(--hot);color:var(--ink);font-size:1.15rem;font-weight:600;letter-spacing:.06em}
 .back:active{background:var(--fg)}
 .dbig{flex:none}
@@ -115,7 +118,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .tabs{flex:none;display:flex;gap:.3rem;border-bottom:1px solid var(--line)}
 .tabs button{flex:1 1 auto;min-height:2.3rem;padding:0 .2rem;font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--dim);border:1px solid var(--line);border-bottom:0;border-radius:.3rem .3rem 0 0;white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--ink);background:var(--z);border-color:var(--z)}
-.pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:.45rem;overflow:hidden}
+.pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:.3rem;overflow:hidden}
 .pane.scroll{overflow:auto;overscroll-behavior:contain;display:block}
 .sec{font-size:.75rem;letter-spacing:.1em;color:var(--dim);border-bottom:1px dashed var(--line);padding-bottom:.15rem;margin-bottom:.3rem}
 .inrow{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;min-height:2.5rem}
@@ -159,8 +162,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 /* tables and notes inside a page */
 table{border-collapse:collapse;width:100%;font-size:max(.8rem,11px);font-variant-numeric:tabular-nums;white-space:nowrap}
 th,td{padding:.3rem .28rem;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--bg)}
-thead th{position:sticky;top:0;background:var(--bg);color:var(--dim);font-weight:500;z-index:1}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+thead th{position:sticky;top:0;background:var(--panel);color:var(--dim);font-weight:500;z-index:1}
 thead th:first-child{z-index:2}
 td{color:var(--fg)}
 tr.key td{color:var(--hot);font-weight:600}
@@ -594,9 +597,9 @@ const MODS=[
  {k:"pay",z:"pay",hash:"take-home",n:"TAKE HOME",q:"What lands in my bank?",u:"a month",empty:"Enter your salary",
   tabs:[["MAIN",[N("salary","salary",1000),N("eePct","your pension",1,"pct",{ro:(o)=>S.pensionMode==="target"&&o?r2(o.pct):null,sub:()=>S.pensionMode==="target"?"worked out from your target":""}),N("erPct","employer pension",1,"pct")]],
     ["TAX",[C("year","tax year",YEAROPTS),C("region","tax region",REGIONS),C("loan","student loan",[["","None"],["p1","Plan 1"],["p2","Plan 2"],["p4","Plan 4"],["p5","Plan 5"]]),C("pg","postgraduate loan",[["0","No"],["1","Yes"]]),
-      N("children","children on Child Benefit",1,"n"),N("allowance","tax-free allowance",10),N("bik","taxable benefits a month",10)]],
+      N("children","Child Benefit children",1,"n"),N("allowance","tax-free allowance",10),N("bik","taxable benefits a month",10)]],
     ["BONUS",[N("bonusValue","bonus",500,"gbp",{fmtOf:()=>S.bonusType==="pct"?"pct":"gbp",stepOf:()=>S.bonusType==="pct"?1:500}),C("bonusType","bonus entered as",[["amount","£ amount"],["pct","% of salary"]]),
-      C("bsType","bonus into pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","To leave a set take-home"]]),
+      C("bsType","bonus to pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","To leave a set take-home"]]),
       N("bsValue","that amount",100,"gbp",{show:()=>S.bsType!=="none",fmtOf:()=>S.bsType==="pct"?"pct":"gbp",stepOf:()=>S.bsType==="pct"?5:100}),
       N("risePct","pay rise in the year",.5,"pct",{min:-50}),C("riseFrom","pay rise starts",()=>MONTHS.map((m,i)=>[i+1,m]))]],
     ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","A take-home target"]]),
