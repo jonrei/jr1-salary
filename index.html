@@ -125,7 +125,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .inrow .lab{flex:1 1 auto;min-width:0;font-size:.95rem;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inrow .lab small{display:block;font-size:.7rem;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
 .inrow .val{flex:0 0 7.4rem;min-height:2.5rem;text-align:right;font-size:1.12rem;font-weight:600;color:var(--hot);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px dotted var(--line)}
-.inrow .val.wide{flex-basis:11.5rem;font-size:1rem}
+.inrow .val.wide{flex-basis:9.6rem;font-size:.92rem}
 .inrow .val.long{font-size:.92rem;letter-spacing:-.03em}
 .inrow .val.carried{text-decoration:underline dashed;text-underline-offset:.2em}
 .inrow .val.off{color:var(--dim);border-bottom-color:transparent}
@@ -596,14 +596,14 @@ const num=a=>({c:a});
 const MODS=[
  {k:"pay",z:"pay",hash:"take-home",n:"TAKE HOME",q:"What lands in my bank?",u:"a month",empty:"Enter your salary",
   tabs:[["MAIN",[N("salary","salary",1000),N("eePct","your pension",1,"pct",{ro:(o)=>S.pensionMode==="target"&&o?r2(o.pct):null,sub:()=>S.pensionMode==="target"?"worked out from your target":""}),N("erPct","employer pension",1,"pct")]],
-    ["TAX",[C("year","tax year",YEAROPTS),C("region","tax region",REGIONS),C("loan","student loan",[["","None"],["p1","Plan 1"],["p2","Plan 2"],["p4","Plan 4"],["p5","Plan 5"]]),C("pg","postgraduate loan",[["0","No"],["1","Yes"]]),
-      N("children","Child Benefit children",1,"n"),N("allowance","tax-free allowance",10),N("bik","taxable benefits a month",10)]],
+    ["TAX",[C("year","tax year",YEAROPTS),C("region","tax region",REGIONS),C("loan","student loan",[["","None"],["p1","Plan 1"],["p2","Plan 2"],["p4","Plan 4"],["p5","Plan 5"]]),C("pg","postgrad loan",[["0","No"],["1","Yes"]]),
+      N("children","children",1,"n"),N("allowance","tax-free allowance",10),N("bik","taxable benefits /mo",10)]],
     ["BONUS",[N("bonusValue","bonus",500,"gbp",{fmtOf:()=>S.bonusType==="pct"?"pct":"gbp",stepOf:()=>S.bonusType==="pct"?1:500}),C("bonusType","bonus entered as",[["amount","£ amount"],["pct","% of salary"]]),
-      C("bsType","bonus to pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","To leave a set take-home"]]),
+      C("bsType","bonus to pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","Set take-home"]]),
       N("bsValue","that amount",100,"gbp",{show:()=>S.bsType!=="none",fmtOf:()=>S.bsType==="pct"?"pct":"gbp",stepOf:()=>S.bsType==="pct"?5:100}),
       N("risePct","pay rise in the year",.5,"pct",{min:-50}),C("riseFrom","pay rise starts",()=>MONTHS.map((m,i)=>[i+1,m]))]],
-    ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","A take-home target"]]),
-      N("netTarget","monthly take-home target",50,"gbp",{show:()=>S.pensionMode==="target"}),N("sacYear","other sacrifice a year",100,"gbp",SAC),N("postMonth","after-tax deductions /mo",10,"gbp",POST)]]],
+    ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","Take-home target"]]),
+      N("netTarget","take-home target /mo",50,"gbp",{show:()=>S.pensionMode==="target"}),N("sacYear","other sacrifice /yr",100,"gbp",SAC),N("postMonth","after-tax taken /mo",10,"gbp",POST)]]],
   calc(c){
     if(!(v(S.salary)>0))return null;
     const K=c.C=compute(S),R=K.R,sum=R.sum,tax=sum("tax"),ni=sum("ni"),loan=sum("loan"),eePen=sum("pen"),bsac=sum("bsac"),emp=sum("emp"),sch=sum("sch"),post=sum("post"),penAll=eePen+bsac+emp;
@@ -655,7 +655,7 @@ const MODS=[
  {k:"pot",z:"save",hash:"pension",n:"PENSION",q:"What will my pension be?",u:"pot, in today's money",empty:"Enter your age",
   tabs:[["MAIN",[N("ppAge","your age",1,"n",{start:40}),N("ppRetire","retire at",1,"n"),N("ppPot","pot today",1000),N("ppMonthly","paid in a month",50),N("ppDraw","drawdown a year",.5,"pct")]],
     ["DRAWDOWN",[N("ppDdAge","drawdown from age",1,"n"),N("ppGrowth","growth a year",.5,"pct"),B("spOn","add State Pension"),N("spWeekly","State Pension a week",1,"gbp2",{show:()=>S.spOn}),N("spAge","State Pension age",1,"n",{show:()=>S.spOn}),
-      C("lsType","tax-free lump sum",[["none","None"],["max","The most allowed"],["amount","An amount"]]),N("lsAmount","lump sum amount",1000,"gbp",{show:()=>S.lsType==="amount"}),N("lsAge","lump sum at age",1,"n",{show:()=>S.lsType!=="none"})]]],
+      C("lsType","tax-free cash",[["none","None"],["max","The most allowed"],["amount","An amount"]]),N("lsAmount","lump sum amount",1000,"gbp",{show:()=>S.lsType==="amount"}),N("lsAge","lump sum at age",1,"n",{show:()=>S.lsType!=="none"})]]],
   calc(c){
     if(!(v(S.ppAge)>0))return null;
     const monthly=v(eff("ppMonthly",c)),lim=c.C?pensionLimits(S,c.C):null,limit=lim?Math.min(lim.allow,lim.pay):AA,P=c.P=potCalc(S,monthly,undefined,limit),rate=v(S.ppDraw),later=P.sp>0&&P.spFrom>P.dd,warn=[];
@@ -677,7 +677,7 @@ const MODS=[
   }},
  {k:"ci",z:"save",hash:"compound",n:"COMPOUND",q:"How will my savings grow?",u:"at the end",empty:"Enter a starting amount or a payment",
   tabs:[["MAIN",[N("ciStart","starting amount",500),N("ciPay","regular payment",25),C("ciFreq","paid in",[["weekly","Weekly"],["monthly","Monthly"]]),N("ciRate","interest a year",.25,"pct"),N("ciYears","years",1,"n")]],
-    ["OPTIONS",[N("ciRise","payment rises a year",1,"pct"),C("ciComp","interest is added",[["monthly","Monthly"],["yearly","Yearly"],["daily","Daily"]]),N("ciInfl","price rises a year",.5,"pct")]]],
+    ["OPTIONS",[N("ciRise","payment rises a year",1,"pct"),C("ciComp","interest added",[["monthly","Monthly"],["yearly","Yearly"],["daily","Daily"]]),N("ciInfl","price rises a year",.5,"pct")]]],
   calc(c){
     const pay=v(eff("ciPay",c));if(!(v(S.ciYears)>=1&&(v(S.ciStart)>0||pay>0)))return null;
     const R=ciCalc(Object.assign({},S,{ciPay:pay})),infl=v(S.ciInfl);
@@ -738,7 +738,7 @@ const MODS=[
       tables:{BREAKDOWN:{head:["","A year","A month"],rows:[[sole?"Profit":"Salary and dividends",T.gross],["Income tax",-T.tax],["National Insurance",-T.ni],sole?null:["Tax on dividends",-T.divTax],["Take-home",T.net,1]].filter(Boolean).map(([t,a,key])=>({c:[t,gbp(a),gbp(a/12)],key}))}}};
   }},
  {k:"cg",z:"tax",hash:"capital-gains",n:"CAP GAINS",l:"CAPITAL GAINS",q:"What tax when I sell?",u:"tax to pay",empty:"Enter what you sold for",
-  tabs:[["MAIN",[N("cgSold","sold for",1000),N("cgPaid","bought for",1000),N("cgCosts","costs",100),N("cgIncome","your income a year",1000)]]],
+  tabs:[["MAIN",[N("cgSold","sold for",1000),N("cgPaid","bought for",1000),N("cgCosts","costs",100),N("cgIncome","income a year",1000)]]],
   calc(c){
     const sold=v(S.cgSold),gain=sold-v(S.cgPaid)-v(S.cgCosts);if(!(sold>0))return null;
     const R=cgtCalc(gain,v(eff("cgIncome",c)));
