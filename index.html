@@ -40,7 +40,13 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 [hidden]{display:none!important}
 #stage{position:relative;height:100vh;height:100dvh;max-width:34rem;margin:0 auto;display:flex;flex-direction:column;gap:.5rem;
   padding:max(.6rem,env(safe-area-inset-top)) max(1.2rem,env(safe-area-inset-right)) max(.6rem,env(safe-area-inset-bottom)) max(1.2rem,env(safe-area-inset-left))}
-.bar{flex:none;display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:var(--dim)}
+.bar{flex:none;display:flex;align-items:center;gap:.6rem;min-height:2.3rem;font-size:.9rem;color:var(--dim)}
+/* the way back to the map sits in the top bar, shown only on a page, so a page can open with its name exactly where the panel had it */
+#topmap{margin-left:auto;min-height:2.3rem;font-size:1.05rem;visibility:hidden}
+#stage.paged #topmap,#stage.paged #botmap{visibility:visible}
+/* a second way back, bottom right, beside the log lines */
+#botmap{position:absolute;right:max(1.2rem,env(safe-area-inset-right));bottom:max(.6rem,env(safe-area-inset-bottom));z-index:6;visibility:hidden}
+#stage.paged #log{padding-right:8rem}
 .bar b{color:var(--hot);font-weight:600;letter-spacing:.06em}
 .bar a{margin-left:auto;color:var(--dim);font-size:.8rem;text-decoration:underline;text-underline-offset:.2em}
 .cursor{display:inline-block;width:.55em;height:1em;background:var(--hot);vertical-align:-.12em;animation:blink 1.1s steps(1) infinite}
@@ -91,10 +97,14 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #wires circle{fill:var(--hot)}
 @keyframes flow{to{stroke-dashoffset:-7}}
 /* ---- a page: one panel, zoomed in ---- */
-#detail{position:absolute;inset:0;display:flex;flex-direction:column;gap:.45rem;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .22s}
+/* The page keeps the lit frame the chosen panel had on the map, in its territory's colour, so the panel and its page read as one thing. */
+#detail{--pad:.55rem;position:absolute;inset:0;display:flex;flex-direction:column;gap:.28rem;padding:var(--pad);background:var(--panel);opacity:0;pointer-events:none;transition:opacity .22s;
+  border:1px solid #fff;border-radius:.5rem;box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 1.5rem color-mix(in srgb,var(--z) 40%,transparent);animation:frame 3.2s ease-in-out infinite}
+@keyframes frame{50%{box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 .7rem color-mix(in srgb,var(--z) 22%,transparent)}}
 #detail.on{opacity:1;pointer-events:auto}
-.dhead{flex:none;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid var(--line);padding-bottom:.4rem}
-.dhead h1{flex:1 1 auto;min-width:0;margin:0;font-size:1.9rem;font-weight:600;letter-spacing:-.03em;line-height:1.05;color:var(--z);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The page's name is the panel's name as the zoom leaves it: the same words, size and place (--hs, --hx, --hy are set from the panel when the page opens). */
+.dhead{flex:none;border-bottom:1px solid var(--line);padding-bottom:.2rem}
+.dhead h1{margin:max(0px,calc(var(--hy,0px) - var(--pad) - 1px)) 0 0 max(0px,calc(var(--hx,0px) - var(--pad) - 1px));font-size:var(--hs,1.9rem);font-weight:600;letter-spacing:-.035em;word-spacing:-.3em;line-height:1.15;color:var(--z);white-space:nowrap}
 .back{flex:none;display:flex;align-items:center;gap:.4rem;min-height:3rem;padding:0 1rem;border-radius:.3rem;background:var(--hot);color:var(--ink);font-size:1.15rem;font-weight:600;letter-spacing:.06em}
 .back:active{background:var(--fg)}
 .dbig{flex:none}
@@ -108,14 +118,14 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .tabs{flex:none;display:flex;gap:.3rem;border-bottom:1px solid var(--line)}
 .tabs button{flex:1 1 auto;min-height:2.3rem;padding:0 .2rem;font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--dim);border:1px solid var(--line);border-bottom:0;border-radius:.3rem .3rem 0 0;white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--ink);background:var(--z);border-color:var(--z)}
-.pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:.45rem;overflow:hidden}
+.pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:.3rem;overflow:hidden}
 .pane.scroll{overflow:auto;overscroll-behavior:contain;display:block}
 .sec{font-size:.75rem;letter-spacing:.1em;color:var(--dim);border-bottom:1px dashed var(--line);padding-bottom:.15rem;margin-bottom:.3rem}
 .inrow{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;min-height:2.5rem}
 .inrow .lab{flex:1 1 auto;min-width:0;font-size:.95rem;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inrow .lab small{display:block;font-size:.7rem;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
 .inrow .val{flex:0 0 7.4rem;min-height:2.5rem;text-align:right;font-size:1.12rem;font-weight:600;color:var(--hot);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px dotted var(--line)}
-.inrow .val.wide{flex-basis:11.5rem;font-size:1rem}
+.inrow .val.wide{flex-basis:9.6rem;font-size:.92rem}
 .inrow .val.long{font-size:.92rem;letter-spacing:-.03em}
 .inrow .val.carried{text-decoration:underline dashed;text-underline-offset:.2em}
 .inrow .val.off{color:var(--dim);border-bottom-color:transparent}
@@ -147,15 +157,13 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .lnk .bg{font-size:.82rem;color:var(--fg);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lnk .go{font-size:1.3rem;color:var(--z)}
 .none{font-size:.85rem;color:var(--dim)}
-.dfoot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:.7rem}
-.dfoot .path{color:var(--dim);font-size:.85rem}
 .clr{display:block;width:100%;min-height:2.6rem;margin:.6rem 0 .3rem;border:1px dashed var(--warn);border-radius:.25rem;color:var(--warn);font-size:.85rem;letter-spacing:.06em}
 .clr.sure{border-style:solid;background:var(--warn);color:var(--bg);font-weight:600}
 /* tables and notes inside a page */
 table{border-collapse:collapse;width:100%;font-size:max(.8rem,11px);font-variant-numeric:tabular-nums;white-space:nowrap}
 th,td{padding:.3rem .28rem;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--bg)}
-thead th{position:sticky;top:0;background:var(--bg);color:var(--dim);font-weight:500;z-index:1}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+thead th{position:sticky;top:0;background:var(--panel);color:var(--dim);font-weight:500;z-index:1}
 thead th:first-child{z-index:2}
 td{color:var(--fg)}
 tr.key td{color:var(--hot);font-weight:600}
@@ -178,12 +186,13 @@ body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;
 </head>
 <body>
 <div id="stage">
-  <div class="bar"><b>JR1 MONEY</b><span class="cursor" aria-hidden="true"></span></div>
+  <div class="bar"><b>JR1 MONEY</b><span class="cursor" aria-hidden="true"></span><button type="button" class="back" id="topmap">‹ MAP</button></div>
   <main id="view">
     <div id="map" aria-label="All calculators"><svg id="wires" aria-hidden="true"></svg><canvas id="fx" aria-hidden="true"></canvas></div>
     <section id="detail"></section>
   </main>
   <div id="log" aria-live="polite"><div>&gt; starting…</div></div>
+  <button type="button" class="back" id="botmap">‹ MAP</button>
   <noscript><p class="note">These calculators need JavaScript turned on. Everything runs on your device; nothing is sent anywhere.</p></noscript>
 </div>
 <script>
@@ -587,14 +596,14 @@ const num=a=>({c:a});
 const MODS=[
  {k:"pay",z:"pay",hash:"take-home",n:"TAKE HOME",q:"What lands in my bank?",u:"a month",empty:"Enter your salary",
   tabs:[["MAIN",[N("salary","salary",1000),N("eePct","your pension",1,"pct",{ro:(o)=>S.pensionMode==="target"&&o?r2(o.pct):null,sub:()=>S.pensionMode==="target"?"worked out from your target":""}),N("erPct","employer pension",1,"pct")]],
-    ["TAX",[C("year","tax year",YEAROPTS),C("region","tax region",REGIONS),C("loan","student loan",[["","None"],["p1","Plan 1"],["p2","Plan 2"],["p4","Plan 4"],["p5","Plan 5"]]),C("pg","postgraduate loan",[["0","No"],["1","Yes"]]),
-      N("children","children on Child Benefit",1,"n"),N("allowance","tax-free allowance",10),N("bik","taxable benefits a month",10)]],
+    ["TAX",[C("year","tax year",YEAROPTS),C("region","tax region",REGIONS),C("loan","student loan",[["","None"],["p1","Plan 1"],["p2","Plan 2"],["p4","Plan 4"],["p5","Plan 5"]]),C("pg","postgrad loan",[["0","No"],["1","Yes"]]),
+      N("children","children",1,"n"),N("allowance","tax-free allowance",10),N("bik","taxable benefits /mo",10)]],
     ["BONUS",[N("bonusValue","bonus",500,"gbp",{fmtOf:()=>S.bonusType==="pct"?"pct":"gbp",stepOf:()=>S.bonusType==="pct"?1:500}),C("bonusType","bonus entered as",[["amount","£ amount"],["pct","% of salary"]]),
-      C("bsType","bonus into pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","To leave a set take-home"]]),
+      C("bsType","bonus to pension",[["none","None"],["pct","A % of it"],["amount","A £ amount"],["target","Set take-home"]]),
       N("bsValue","that amount",100,"gbp",{show:()=>S.bsType!=="none",fmtOf:()=>S.bsType==="pct"?"pct":"gbp",stepOf:()=>S.bsType==="pct"?5:100}),
       N("risePct","pay rise in the year",.5,"pct",{min:-50}),C("riseFrom","pay rise starts",()=>MONTHS.map((m,i)=>[i+1,m]))]],
-    ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","A take-home target"]]),
-      N("netTarget","monthly take-home target",50,"gbp",{show:()=>S.pensionMode==="target"}),N("sacYear","other sacrifice a year",100,"gbp",SAC),N("postMonth","after-tax deductions /mo",10,"gbp",POST)]]],
+    ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","Take-home target"]]),
+      N("netTarget","take-home target /mo",50,"gbp",{show:()=>S.pensionMode==="target"}),N("sacYear","other sacrifice /yr",100,"gbp",SAC),N("postMonth","after-tax taken /mo",10,"gbp",POST)]]],
   calc(c){
     if(!(v(S.salary)>0))return null;
     const K=c.C=compute(S),R=K.R,sum=R.sum,tax=sum("tax"),ni=sum("ni"),loan=sum("loan"),eePen=sum("pen"),bsac=sum("bsac"),emp=sum("emp"),sch=sum("sch"),post=sum("post"),penAll=eePen+bsac+emp;
@@ -646,7 +655,7 @@ const MODS=[
  {k:"pot",z:"save",hash:"pension",n:"PENSION",q:"What will my pension be?",u:"pot, in today's money",empty:"Enter your age",
   tabs:[["MAIN",[N("ppAge","your age",1,"n",{start:40}),N("ppRetire","retire at",1,"n"),N("ppPot","pot today",1000),N("ppMonthly","paid in a month",50),N("ppDraw","drawdown a year",.5,"pct")]],
     ["DRAWDOWN",[N("ppDdAge","drawdown from age",1,"n"),N("ppGrowth","growth a year",.5,"pct"),B("spOn","add State Pension"),N("spWeekly","State Pension a week",1,"gbp2",{show:()=>S.spOn}),N("spAge","State Pension age",1,"n",{show:()=>S.spOn}),
-      C("lsType","tax-free lump sum",[["none","None"],["max","The most allowed"],["amount","An amount"]]),N("lsAmount","lump sum amount",1000,"gbp",{show:()=>S.lsType==="amount"}),N("lsAge","lump sum at age",1,"n",{show:()=>S.lsType!=="none"})]]],
+      C("lsType","tax-free cash",[["none","None"],["max","The most allowed"],["amount","An amount"]]),N("lsAmount","lump sum amount",1000,"gbp",{show:()=>S.lsType==="amount"}),N("lsAge","lump sum at age",1,"n",{show:()=>S.lsType!=="none"})]]],
   calc(c){
     if(!(v(S.ppAge)>0))return null;
     const monthly=v(eff("ppMonthly",c)),lim=c.C?pensionLimits(S,c.C):null,limit=lim?Math.min(lim.allow,lim.pay):AA,P=c.P=potCalc(S,monthly,undefined,limit),rate=v(S.ppDraw),later=P.sp>0&&P.spFrom>P.dd,warn=[];
@@ -668,7 +677,7 @@ const MODS=[
   }},
  {k:"ci",z:"save",hash:"compound",n:"COMPOUND",q:"How will my savings grow?",u:"at the end",empty:"Enter a starting amount or a payment",
   tabs:[["MAIN",[N("ciStart","starting amount",500),N("ciPay","regular payment",25),C("ciFreq","paid in",[["weekly","Weekly"],["monthly","Monthly"]]),N("ciRate","interest a year",.25,"pct"),N("ciYears","years",1,"n")]],
-    ["OPTIONS",[N("ciRise","payment rises a year",1,"pct"),C("ciComp","interest is added",[["monthly","Monthly"],["yearly","Yearly"],["daily","Daily"]]),N("ciInfl","price rises a year",.5,"pct")]]],
+    ["OPTIONS",[N("ciRise","payment rises a year",1,"pct"),C("ciComp","interest added",[["monthly","Monthly"],["yearly","Yearly"],["daily","Daily"]]),N("ciInfl","price rises a year",.5,"pct")]]],
   calc(c){
     const pay=v(eff("ciPay",c));if(!(v(S.ciYears)>=1&&(v(S.ciStart)>0||pay>0)))return null;
     const R=ciCalc(Object.assign({},S,{ciPay:pay})),infl=v(S.ciInfl);
@@ -729,7 +738,7 @@ const MODS=[
       tables:{BREAKDOWN:{head:["","A year","A month"],rows:[[sole?"Profit":"Salary and dividends",T.gross],["Income tax",-T.tax],["National Insurance",-T.ni],sole?null:["Tax on dividends",-T.divTax],["Take-home",T.net,1]].filter(Boolean).map(([t,a,key])=>({c:[t,gbp(a),gbp(a/12)],key}))}}};
   }},
  {k:"cg",z:"tax",hash:"capital-gains",n:"CAP GAINS",l:"CAPITAL GAINS",q:"What tax when I sell?",u:"tax to pay",empty:"Enter what you sold for",
-  tabs:[["MAIN",[N("cgSold","sold for",1000),N("cgPaid","bought for",1000),N("cgCosts","costs",100),N("cgIncome","your income a year",1000)]]],
+  tabs:[["MAIN",[N("cgSold","sold for",1000),N("cgPaid","bought for",1000),N("cgCosts","costs",100),N("cgIncome","income a year",1000)]]],
   calc(c){
     const sold=v(S.cgSold),gain=sold-v(S.cgPaid)-v(S.cgCosts);if(!(sold>0))return null;
     const R=cgtCalc(gain,v(eff("cgIncome",c)));
@@ -814,7 +823,8 @@ function wires(){
   const svg=$("wires"),map=$("map"),o=map.getBoundingClientRect();
   if(map.style.transform)return;   // measured only while the map is at rest
   svg.innerHTML="";for(const k in EDGE)delete EDGE[k];
-  for(const k in TILE){const r=TILE[k].el.getBoundingClientRect();TILE[k].box={x:r.left-o.left,y:r.top-o.top,w:r.width,h:r.height};}
+  for(const k in TILE){const r=TILE[k].el.getBoundingClientRect(),nm=TILE[k].el.querySelector(".nm"),n=nm.getBoundingClientRect();
+    TILE[k].box={x:r.left-o.left,y:r.top-o.top,w:r.width,h:r.height};TILE[k].nmAt={x:n.left-r.left,y:n.top-r.top,fs:parseFloat(getComputedStyle(nm).fontSize)};}   // where the name sits in its panel, for the page heading
   // the middle of each gap: gx[c] lies right of column c, gy[r] lies below row r
   const col=c=>Object.keys(TILE).find(k=>AT[k][0]===c),row=r=>Object.keys(TILE).find(k=>AT[k][1]===r),Bx=k=>TILE[k].box;
   const gx=[0,1,2].map(c=>(Bx(col(c)).x+Bx(col(c)).w+Bx(col(c+1)).x)/2),gy=[0,1,2].map(r=>(Bx(row(r)).y+Bx(row(r)).h+Bx(row(r+1)).y)/2);
@@ -950,17 +960,17 @@ function surge(src,sp,prev){
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
 function zoomIn(k,snap){
   if(busy)return;busy=!snap;open=k;tab=0;
-  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w,quick=snap||STILL(),el=TILE[k].el;
+  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w,quick=snap||STILL(),el=TILE[k].el;$("stage").classList.add("paged");
   // the chosen panel's border lights at once and holds for a moment, then the camera moves in: about half a second in all
   const go=()=>{
     map.classList.toggle("snap",!!snap);map.style.transform=`translate(${-b.x*s}px,${-b.y*s}px) scale(${s})`;
-    setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");el.classList.remove("pick");busy=false;const bk=$("detail").querySelector(".back");if(bk)bk.focus();},quick?0:350);
+    setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");el.classList.remove("pick");busy=false;$("topmap").focus();},quick?0:350);
   };
   paintPage(true);document.title=full(BY[k]).toLowerCase().replace(/^./,ch=>ch.toUpperCase())+" · JR1 Money";
   if(quick)go();else{el.classList.add("pick");setTimeout(go,110);}
 }
 function zoomOut(then){
-  if(busy||!open)return;busy=true;const map=$("map"),k=open;
+  if(busy||!open)return;busy=true;const map=$("map"),k=open;$("stage").classList.remove("paged");
   map.classList.remove("gone");$("detail").classList.remove("on");document.title="JR1 Money";
   requestAnimationFrame(()=>{map.style.transform="";open=null;setTimeout(()=>{
     busy=false;wires();
@@ -999,10 +1009,11 @@ function paintPage(fresh){
   const m=BY[open],o=OUT[open],d=$("detail"),tabs=tabsOf(m,o);if(tab>=tabs.length)tab=0;const T=tabs[tab];
   if(fresh){
     d.style.setProperty("--z",`var(--z-${m.z})`);
-    d.innerHTML=`<div class="dhead"><h1>${full(m)}</h1><button type="button" class="back" data-map>‹ MAP</button></div>
+    const at=TILE[open].nmAt,z=$("map").offsetWidth/TILE[open].box.w;
+    if(at){d.style.setProperty("--hs",at.fs*z+"px");d.style.setProperty("--hx",at.x*z+"px");d.style.setProperty("--hy",at.y*z+"px");}
+    d.innerHTML=`<div class="dhead"><h1 aria-label="${full(m)}">${m.n}</h1></div>
       <div class="dbig"><div class="dq">${m.q}</div><div class="cap" id="dcap"></div><div class="fig" id="dfig"></div><div class="meter" id="dmeter"></div><div class="dwarn" id="dwarn"></div></div>
-      <div class="tabs" role="tablist" id="dtabs"></div><div class="pane" id="dpane" role="tabpanel"></div>
-      <div class="dfoot"><span class="path">/${m.z}/${m.hash}</span><button type="button" class="back" data-map>‹ MAP</button></div>`;
+      <div class="tabs" role="tablist" id="dtabs"></div><div class="pane" id="dpane" role="tabpanel"></div>`;
   }
   $("dcap").textContent=o?(o.unit||m.u):m.empty;
   if(!o||o.text){$("dfig").textContent=bigText(o);LAST.dfig=null;}else roll($("dfig"),o.big,x=>(o.sign&&x>=0?"+":"")+gbp(x,o.dp||0),"dfig");
@@ -1086,7 +1097,7 @@ NOTES.pot=["Until you retire, the pot grows by the growth rate with the monthly 
   "In the YEARS section, a quarter of each withdrawal is tax free unless a lump sum has used the tax-free cash. The State Pension is taxable. No National Insurance is charged on pension income. Tax uses the year and region set in Take home."];
 NOTES.ci=["Each week or month the balance earns interest and then the regular payment is added. Weekly payments are counted as 52 a year. If the payment rises each year, the rise applies from the start of the second year. Tax on interest is not included."];
 if(typeof document!=="undefined"&&document.getElementById("map")){
-  S=load();build();$("detail").addEventListener("click",pageClick);addEventListener("hashchange",route);
+  S=load();build();$("detail").addEventListener("click",pageClick);for(const id of ["topmap","botmap"])$(id).addEventListener("click",()=>{location.hash="";});addEventListener("hashchange",route);
   (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(()=>{
     wires();route(true);
     if(!STILL()){$("map").classList.add("live");requestAnimationFrame(fxFrame);}
