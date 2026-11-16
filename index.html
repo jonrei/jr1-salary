@@ -48,7 +48,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #view{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
 /* ---- the map ---- */
 #map{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:1.5rem 1.35rem;padding-top:.45rem;transform-origin:0 0;
-  transition:transform .55s cubic-bezier(.7,0,.2,1);
+  transition:transform .36s cubic-bezier(.7,0,.2,1);
   background-image:linear-gradient(to right,rgba(47,168,102,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(47,168,102,.09) 1px,transparent 1px);background-size:2.4rem 2.4rem}
 #map.gone{visibility:hidden}
 #map.snap{transition:none}
@@ -78,6 +78,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #map.live .zone{border-color:transparent}
 #map.live .tile{transition:border-color .3s,box-shadow .3s,opacity .35s,transform .25s}
 .tile.dim{opacity:.22}
+.tile.pick,#map.live .tile.pick{transition:none;border-color:#fff;box-shadow:0 0 0 .12rem var(--z),0 0 1.6rem var(--z),inset 0 0 1rem color-mix(in srgb,var(--z) 35%,transparent)}
 .tile.hit{transform:scale(1.045);border-color:var(--hot);box-shadow:0 0 1.2rem color-mix(in srgb,var(--z) 70%,transparent),inset 0 0 .8rem color-mix(in srgb,var(--z) 25%,transparent)}
 .chip{position:absolute;z-index:3;transform:translate(-50%,-50%);padding:.1rem .35rem;border:1px solid var(--z);border-radius:.25rem;background:var(--bg);color:var(--z);font-size:1.05rem;font-weight:600;white-space:nowrap;
   box-shadow:0 0 .8rem color-mix(in srgb,var(--z) 60%,transparent);pointer-events:none;animation:chip 2.6s ease-out both}
@@ -949,10 +950,14 @@ function surge(src,sp,prev){
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
 function zoomIn(k,snap){
   if(busy)return;busy=!snap;open=k;tab=0;
-  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w;
-  map.classList.toggle("snap",!!snap);map.style.transform=`translate(${-b.x*s}px,${-b.y*s}px) scale(${s})`;
+  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w,quick=snap||STILL(),el=TILE[k].el;
+  // the chosen panel's border lights at once and holds for a moment, then the camera moves in: about half a second in all
+  const go=()=>{
+    map.classList.toggle("snap",!!snap);map.style.transform=`translate(${-b.x*s}px,${-b.y*s}px) scale(${s})`;
+    setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");el.classList.remove("pick");busy=false;const bk=$("detail").querySelector(".back");if(bk)bk.focus();},quick?0:350);
+  };
   paintPage(true);document.title=full(BY[k]).toLowerCase().replace(/^./,ch=>ch.toUpperCase())+" · JR1 Money";
-  setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");busy=false;const bk=$("detail").querySelector(".back");if(bk)bk.focus();},snap||STILL()?0:520);
+  if(quick)go();else{el.classList.add("pick");setTimeout(go,110);}
 }
 function zoomOut(then){
   if(busy||!open)return;busy=true;const map=$("map"),k=open;
