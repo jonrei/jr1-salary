@@ -114,7 +114,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .dhead h1{margin:max(0px,calc(var(--hy,0px) - var(--pad) - 1px)) 0 0 max(0px,calc(var(--hx,0px) - var(--pad) - 1px));font-size:var(--hs,1.9rem);font-weight:600;letter-spacing:-.035em;word-spacing:-.3em;line-height:1.15;color:var(--z);white-space:nowrap}
 .back{flex:none;display:flex;align-items:center;gap:.4rem;min-height:3rem;padding:0 1rem;border-radius:.3rem;background:var(--hot);color:var(--ink);font-size:1.15rem;font-weight:600;letter-spacing:.06em}
 .back:active{background:var(--fg)}
-.dbig{flex:none}
+.dbig{flex:none;position:relative}
+.pchip{position:absolute;right:0;transform:translateY(-50%);padding:.15rem .5rem;border:1px solid var(--hot);border-radius:.3rem;background:var(--bg);color:var(--hot);font-size:1.25rem;font-weight:600;white-space:nowrap;
+  box-shadow:0 0 .9rem rgba(93,255,160,.55);pointer-events:none;animation:pchip 2.8s ease-out both}
+@keyframes pchip{0%{opacity:0;transform:translateY(-20%) scale(.6)}10%{opacity:1;transform:translateY(-50%) scale(1.12)}20%{transform:translateY(-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-90%)}}
 .dq{font-size:1.05rem;color:var(--fg)}
 .dbig .cap{font-size:.85rem;color:var(--dim)}
 .dbig .fig{font-size:2.7rem;font-weight:600;color:var(--hot);line-height:1.05;letter-spacing:-.04em;white-space:nowrap}
@@ -898,7 +901,14 @@ function change(src,edit,what){
   for(const h of sp.hops)setTimeout(()=>land(h.b,h.a),still?0:h.at+h.ms);
   if(!still&&sp.hops.length)surge(src,sp,prev);
   for(const m of MODS)if(!seen.has(m.k)){paintTile(m);if(changed.has(m.k))flash(TILE[m.k].el);}
-  if(open)paintPage(false);
+  if(open){paintPage(false);pageBadge(prev[open],next[open]);}
+}
+// On an open page, a badge beside the main figure shows how far a change has just moved it.
+function pageBadge(a,b){
+  const fig=$("dfig"),from=a&&!a.text?a.big:0;if(!fig||!b||b.text||Math.abs(b.big-from)<.005)return;
+  const d=b.big-from,c=document.createElement("div");fig.parentNode.querySelectorAll(".pchip").forEach(e=>e.remove());
+  c.className="pchip";c.setAttribute("role","status");c.textContent=(d>=0?"+":"")+gbp(d,Math.abs(d)<100||b.dp?2:0);
+  c.style.top=fig.offsetTop+fig.offsetHeight/2+"px";fig.parentNode.appendChild(c);setTimeout(()=>c.remove(),2800);
 }
 
 // ---- movement on the map, drawn on a canvas that lies over it ----

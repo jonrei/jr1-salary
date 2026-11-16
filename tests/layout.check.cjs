@@ -90,6 +90,7 @@ const fit = () => {
   need((await state()).salary === 42000, "the salary was not kept in the browser");
   await page.click('[data-step="salary"][data-d="1"]');
   need((await state()).salary === 43000, "the + button did not raise the salary");
+  need(await page.$eval(".pchip", (e) => /^\+£\d/.test(e.textContent)).catch(() => false), "no badge showed how far take-home moved");
   need(await page.evaluate(() => document.querySelector(".inrow input") === null && [...document.querySelectorAll(".val")].every((e) => e.tagName === "BUTTON")), "a typing field was left open");
   await openPage("budget");
   need(await page.$eval('[data-edit="bgIncome"]', (e) => e.classList.contains("carried") && e.textContent.includes("£")), "Budget did not carry the take-home figure");
