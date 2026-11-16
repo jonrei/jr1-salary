@@ -105,6 +105,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 @keyframes settle{0%{border-color:#fff;box-shadow:inset 0 0 0 .12rem var(--z),inset 0 0 1.5rem color-mix(in srgb,var(--z) 40%,transparent)}
   100%{border-color:var(--dim);border-top-color:var(--z);box-shadow:var(--rest)}}
 /* faint green characters fall behind the page */
+/* the same across the map: blended in as light only, so it shows faintly through the territories and panels without covering anything */
+#mrain{position:absolute;inset:0;width:100%;height:100%;z-index:2;opacity:.26;mix-blend-mode:screen;pointer-events:none}
 #rain{position:absolute;inset:0;width:100%;height:100%;z-index:-1;opacity:.17;border-radius:inherit;pointer-events:none}
 #detail.on{opacity:1;pointer-events:auto}
 /* The page's name is the panel's name as the zoom leaves it: the same words, size and place (--hs, --hx, --hy are set from the panel when the page opens). */
@@ -193,7 +195,7 @@ body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;
 <div id="stage">
   <div class="bar"><b>JR1 MONEY</b><span class="cursor" aria-hidden="true"></span><button type="button" class="back" id="topmap">‹ MAP</button></div>
   <main id="view">
-    <div id="map" aria-label="All calculators"><svg id="wires" aria-hidden="true"></svg><canvas id="fx" aria-hidden="true"></canvas></div>
+    <div id="map" aria-label="All calculators"><canvas id="mrain" aria-hidden="true"></canvas><svg id="wires" aria-hidden="true"></svg><canvas id="fx" aria-hidden="true"></canvas></div>
     <section id="detail"></section>
   </main>
   <div id="log" aria-live="polite"><div>&gt; starting…</div></div>
@@ -820,7 +822,7 @@ function build(){
   }
   $("sim").addEventListener("click",()=>{const from=v(S.salary)||30000;change("pay",()=>{S.salary=from+3000;},`salary ${gbp(from)} → ${gbp(from+3000)}`);});
   OUT=model();for(const m of MODS)paintTile(m);
-  map.appendChild($("wires"));wires();addEventListener("resize",()=>{if(!open)wires();});
+  map.appendChild($("wires"));wires();addEventListener("resize",()=>{if(!open){wires();mapRain();}});
 }
 // ---- routes between linked panels, drawn through the gaps so they never cross a panel ----
 const NS="http://www.w3.org/2000/svg",EDGE={};
@@ -964,24 +966,35 @@ function surge(src,sp,prev){
 
 // ---- faint characters falling behind an open page ----
 // Drawn a few times a second on a canvas under the page's content, and only while a page is open. With reduced motion it is one still frame.
-let rainTimer=0;
-function rain(){
-  clearInterval(rainTimer);
-  const cv=$("rain"),g=cv.getContext("2d"),rem=parseFloat(getComputedStyle(document.documentElement).fontSize),cell=rem*1.05,W=cv.clientWidth||$("view").clientWidth,H=cv.clientHeight||$("view").clientHeight;
-  cv.width=W;cv.height=H;
+// `fall` draws on one canvas: `cell` is the size of a character, `bg` the colour they fade into, `alive` says whether to keep drawing.
+function fall(cv,cell,bg,alive){
+  const g=cv.getContext("2d"),dpr=Math.min(2,devicePixelRatio||1),W=cv.clientWidth,H=cv.clientHeight;
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);g.setTransform(dpr,0,0,dpr,0,0);
   const cols=Math.ceil(W/cell),rows=Math.ceil(H/cell),drop=Array.from({length:cols},()=>Math.floor(Math.random()*rows*-1)),CH="0123456789£%+−$€¥01";
   g.font=`600 ${cell*.95}px ui-monospace,monospace`;g.textBaseline="top";
   const step=()=>{
-    g.fillStyle="rgba(8,19,12,.09)";g.fillRect(0,0,W,H);   // earlier characters fade into the page colour
+    g.fillStyle=bg;g.fillRect(0,0,W,H);   // earlier characters fade into the background colour
     for(let i=0;i<cols;i++){
       const y=drop[i]*cell;g.fillStyle="#d8ffe8";g.fillText(CH[Math.floor(Math.random()*CH.length)],i*cell,y);
       if(drop[i]>0){g.fillStyle="#5dffa0";g.fillText(CH[Math.floor(Math.random()*CH.length)],i*cell,y-cell);}
       drop[i]=y>H&&Math.random()>.95?Math.floor(Math.random()*-12):drop[i]+1;
     }
   };
-  if(STILL()){for(let n=0;n<rows*2;n++)step();return;}
-  for(let n=0;n<rows;n++)step();   // the page opens with the rain already falling
-  rainTimer=setInterval(()=>{if(!open||!cv.isConnected||document.hidden){if(!open||!cv.isConnected)clearInterval(rainTimer);return;}step();},85);
+  if(STILL()){for(let n=0;n<rows*2;n++)step();return 0;}
+  for(let n=0;n<rows;n++)step();   // it is already falling when first seen
+  const id=setInterval(()=>{const a=alive();if(a===null)clearInterval(id);else if(a&&!document.hidden)step();},85);
+  return id;
+}
+const rainCell=()=>parseFloat(getComputedStyle(document.documentElement).fontSize)*1.05;
+let rainTimer=0,mapRainTimer=0;
+function rain(){   // behind an open page
+  clearInterval(rainTimer);const cv=$("rain");
+  rainTimer=fall(cv,rainCell(),"rgba(8,19,12,.09)",()=>!open||!cv.isConnected?null:true);
+}
+// The same thing behind the map, at the size it would be if a page were shrunk back into its panel, so the two match through the zoom.
+function mapRain(){
+  clearInterval(mapRainTimer);const map=$("map");if(map.style.transform||!TILE.pay.box)return;
+  mapRainTimer=fall($("mrain"),rainCell()*TILE.pay.box.w/map.offsetWidth,"rgba(0,0,0,.09)",()=>!open);
 }
 
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
@@ -1127,7 +1140,7 @@ NOTES.ci=["Each week or month the balance earns interest and then the regular pa
 if(typeof document!=="undefined"&&document.getElementById("map")){
   S=load();build();$("detail").addEventListener("click",pageClick);for(const id of ["topmap","botmap"])$(id).addEventListener("click",()=>{location.hash="";});addEventListener("hashchange",route);
   (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(()=>{
-    wires();route(true);
+    wires();route(true);mapRain();
     if(!STILL()){$("map").classList.add("live");requestAnimationFrame(fxFrame);}
     if(!open){say("&gt; linking 14 panels…");setTimeout(()=>{ripple(ROOTS);setTimeout(()=>say("&gt; ready. tap a panel to zoom in."),1500);},350);}
   });
