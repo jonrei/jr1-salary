@@ -40,7 +40,13 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 [hidden]{display:none!important}
 #stage{position:relative;height:100vh;height:100dvh;max-width:34rem;margin:0 auto;display:flex;flex-direction:column;gap:.5rem;
   padding:max(.6rem,env(safe-area-inset-top)) max(1.2rem,env(safe-area-inset-right)) max(.6rem,env(safe-area-inset-bottom)) max(1.2rem,env(safe-area-inset-left))}
-.bar{flex:none;display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:var(--dim)}
+.bar{flex:none;display:flex;align-items:center;gap:.6rem;min-height:2.3rem;font-size:.9rem;color:var(--dim)}
+/* the way back to the map sits in the top bar, shown only on a page, so a page can open with its name exactly where the panel had it */
+#topmap{margin-left:auto;min-height:2.3rem;font-size:1.05rem;visibility:hidden}
+#stage.paged #topmap,#stage.paged #botmap{visibility:visible}
+/* a second way back, bottom right, beside the log lines */
+#botmap{position:absolute;right:max(1.2rem,env(safe-area-inset-right));bottom:max(.6rem,env(safe-area-inset-bottom));z-index:6;visibility:hidden}
+#stage.paged #log{padding-right:8rem}
 .bar b{color:var(--hot);font-weight:600;letter-spacing:.06em}
 .bar a{margin-left:auto;color:var(--dim);font-size:.8rem;text-decoration:underline;text-underline-offset:.2em}
 .cursor{display:inline-block;width:.55em;height:1em;background:var(--hot);vertical-align:-.12em;animation:blink 1.1s steps(1) infinite}
@@ -93,8 +99,9 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 /* ---- a page: one panel, zoomed in ---- */
 #detail{position:absolute;inset:0;display:flex;flex-direction:column;gap:.45rem;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .22s}
 #detail.on{opacity:1;pointer-events:auto}
-.dhead{flex:none;display:flex;align-items:center;gap:.7rem;border-bottom:1px solid var(--line);padding-bottom:.4rem}
-.dhead h1{flex:1 1 auto;min-width:0;margin:0;font-size:1.9rem;font-weight:600;letter-spacing:-.03em;line-height:1.05;color:var(--z);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The page's name is the panel's name as the zoom leaves it: the same words, size and place (--hs, --hx, --hy are set from the panel when the page opens). */
+.dhead{flex:none;border-bottom:1px solid var(--line);padding-bottom:.2rem}
+.dhead h1{margin:var(--hy,0) 0 0 var(--hx,0);font-size:var(--hs,1.9rem);font-weight:600;letter-spacing:-.035em;word-spacing:-.3em;line-height:1.15;color:var(--z);white-space:nowrap}
 .back{flex:none;display:flex;align-items:center;gap:.4rem;min-height:3rem;padding:0 1rem;border-radius:.3rem;background:var(--hot);color:var(--ink);font-size:1.15rem;font-weight:600;letter-spacing:.06em}
 .back:active{background:var(--fg)}
 .dbig{flex:none}
@@ -147,8 +154,6 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .lnk .bg{font-size:.82rem;color:var(--fg);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lnk .go{font-size:1.3rem;color:var(--z)}
 .none{font-size:.85rem;color:var(--dim)}
-.dfoot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:.7rem}
-.dfoot .path{color:var(--dim);font-size:.85rem}
 .clr{display:block;width:100%;min-height:2.6rem;margin:.6rem 0 .3rem;border:1px dashed var(--warn);border-radius:.25rem;color:var(--warn);font-size:.85rem;letter-spacing:.06em}
 .clr.sure{border-style:solid;background:var(--warn);color:var(--bg);font-weight:600}
 /* tables and notes inside a page */
@@ -178,12 +183,13 @@ body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;
 </head>
 <body>
 <div id="stage">
-  <div class="bar"><b>JR1 MONEY</b><span class="cursor" aria-hidden="true"></span></div>
+  <div class="bar"><b>JR1 MONEY</b><span class="cursor" aria-hidden="true"></span><button type="button" class="back" id="topmap">‹ MAP</button></div>
   <main id="view">
     <div id="map" aria-label="All calculators"><svg id="wires" aria-hidden="true"></svg><canvas id="fx" aria-hidden="true"></canvas></div>
     <section id="detail"></section>
   </main>
   <div id="log" aria-live="polite"><div>&gt; starting…</div></div>
+  <button type="button" class="back" id="botmap">‹ MAP</button>
   <noscript><p class="note">These calculators need JavaScript turned on. Everything runs on your device; nothing is sent anywhere.</p></noscript>
 </div>
 <script>
@@ -814,7 +820,8 @@ function wires(){
   const svg=$("wires"),map=$("map"),o=map.getBoundingClientRect();
   if(map.style.transform)return;   // measured only while the map is at rest
   svg.innerHTML="";for(const k in EDGE)delete EDGE[k];
-  for(const k in TILE){const r=TILE[k].el.getBoundingClientRect();TILE[k].box={x:r.left-o.left,y:r.top-o.top,w:r.width,h:r.height};}
+  for(const k in TILE){const r=TILE[k].el.getBoundingClientRect(),nm=TILE[k].el.querySelector(".nm"),n=nm.getBoundingClientRect();
+    TILE[k].box={x:r.left-o.left,y:r.top-o.top,w:r.width,h:r.height};TILE[k].nmAt={x:n.left-r.left,y:n.top-r.top,fs:parseFloat(getComputedStyle(nm).fontSize)};}   // where the name sits in its panel, for the page heading
   // the middle of each gap: gx[c] lies right of column c, gy[r] lies below row r
   const col=c=>Object.keys(TILE).find(k=>AT[k][0]===c),row=r=>Object.keys(TILE).find(k=>AT[k][1]===r),Bx=k=>TILE[k].box;
   const gx=[0,1,2].map(c=>(Bx(col(c)).x+Bx(col(c)).w+Bx(col(c+1)).x)/2),gy=[0,1,2].map(r=>(Bx(row(r)).y+Bx(row(r)).h+Bx(row(r+1)).y)/2);
@@ -950,17 +957,17 @@ function surge(src,sp,prev){
 // ---- zoom: the camera moves into a panel until it fills the screen, then its page fades in ----
 function zoomIn(k,snap){
   if(busy)return;busy=!snap;open=k;tab=0;
-  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w,quick=snap||STILL(),el=TILE[k].el;
+  const map=$("map"),b=TILE[k].box,s=map.offsetWidth/b.w,quick=snap||STILL(),el=TILE[k].el;$("stage").classList.add("paged");
   // the chosen panel's border lights at once and holds for a moment, then the camera moves in: about half a second in all
   const go=()=>{
     map.classList.toggle("snap",!!snap);map.style.transform=`translate(${-b.x*s}px,${-b.y*s}px) scale(${s})`;
-    setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");el.classList.remove("pick");busy=false;const bk=$("detail").querySelector(".back");if(bk)bk.focus();},quick?0:350);
+    setTimeout(()=>{$("detail").classList.add("on");map.classList.add("gone");map.classList.remove("snap");el.classList.remove("pick");busy=false;$("topmap").focus();},quick?0:350);
   };
   paintPage(true);document.title=full(BY[k]).toLowerCase().replace(/^./,ch=>ch.toUpperCase())+" · JR1 Money";
   if(quick)go();else{el.classList.add("pick");setTimeout(go,110);}
 }
 function zoomOut(then){
-  if(busy||!open)return;busy=true;const map=$("map"),k=open;
+  if(busy||!open)return;busy=true;const map=$("map"),k=open;$("stage").classList.remove("paged");
   map.classList.remove("gone");$("detail").classList.remove("on");document.title="JR1 Money";
   requestAnimationFrame(()=>{map.style.transform="";open=null;setTimeout(()=>{
     busy=false;wires();
@@ -999,10 +1006,11 @@ function paintPage(fresh){
   const m=BY[open],o=OUT[open],d=$("detail"),tabs=tabsOf(m,o);if(tab>=tabs.length)tab=0;const T=tabs[tab];
   if(fresh){
     d.style.setProperty("--z",`var(--z-${m.z})`);
-    d.innerHTML=`<div class="dhead"><h1>${full(m)}</h1><button type="button" class="back" data-map>‹ MAP</button></div>
+    const at=TILE[open].nmAt,z=$("map").offsetWidth/TILE[open].box.w;
+    if(at){d.style.setProperty("--hs",at.fs*z+"px");d.style.setProperty("--hx",at.x*z+"px");d.style.setProperty("--hy",at.y*z+"px");}
+    d.innerHTML=`<div class="dhead"><h1 aria-label="${full(m)}">${m.n}</h1></div>
       <div class="dbig"><div class="dq">${m.q}</div><div class="cap" id="dcap"></div><div class="fig" id="dfig"></div><div class="meter" id="dmeter"></div><div class="dwarn" id="dwarn"></div></div>
-      <div class="tabs" role="tablist" id="dtabs"></div><div class="pane" id="dpane" role="tabpanel"></div>
-      <div class="dfoot"><span class="path">/${m.z}/${m.hash}</span><button type="button" class="back" data-map>‹ MAP</button></div>`;
+      <div class="tabs" role="tablist" id="dtabs"></div><div class="pane" id="dpane" role="tabpanel"></div>`;
   }
   $("dcap").textContent=o?(o.unit||m.u):m.empty;
   if(!o||o.text){$("dfig").textContent=bigText(o);LAST.dfig=null;}else roll($("dfig"),o.big,x=>(o.sign&&x>=0?"+":"")+gbp(x,o.dp||0),"dfig");
@@ -1086,7 +1094,7 @@ NOTES.pot=["Until you retire, the pot grows by the growth rate with the monthly 
   "In the YEARS section, a quarter of each withdrawal is tax free unless a lump sum has used the tax-free cash. The State Pension is taxable. No National Insurance is charged on pension income. Tax uses the year and region set in Take home."];
 NOTES.ci=["Each week or month the balance earns interest and then the regular payment is added. Weekly payments are counted as 52 a year. If the payment rises each year, the rise applies from the start of the second year. Tax on interest is not included."];
 if(typeof document!=="undefined"&&document.getElementById("map")){
-  S=load();build();$("detail").addEventListener("click",pageClick);addEventListener("hashchange",route);
+  S=load();build();$("detail").addEventListener("click",pageClick);for(const id of ["topmap","botmap"])$(id).addEventListener("click",()=>{location.hash="";});addEventListener("hashchange",route);
   (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(()=>{
     wires();route(true);
     if(!STILL()){$("map").classList.add("live");requestAnimationFrame(fxFrame);}
