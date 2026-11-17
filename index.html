@@ -114,7 +114,10 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .dhead h1{margin:max(0px,calc(var(--hy,0px) - var(--pad) - 1px)) 0 0 max(0px,calc(var(--hx,0px) - var(--pad) - 1px));font-size:var(--hs,1.9rem);font-weight:600;letter-spacing:-.035em;word-spacing:-.3em;line-height:1.15;color:var(--z);white-space:nowrap}
 .back{flex:none;display:flex;align-items:center;gap:.4rem;min-height:3rem;padding:0 1rem;border-radius:.3rem;background:var(--hot);color:var(--ink);font-size:1.15rem;font-weight:600;letter-spacing:.06em}
 .back:active{background:var(--fg)}
-.dbig{flex:none}
+.dbig{flex:none;position:relative}
+.pchip{position:absolute;right:0;transform:translateY(-50%);padding:.15rem .5rem;border:1px solid var(--hot);border-radius:.3rem;background:var(--bg);color:var(--hot);font-size:1.25rem;font-weight:600;white-space:nowrap;
+  box-shadow:0 0 .9rem rgba(93,255,160,.55);pointer-events:none;animation:pchip 2.8s ease-out both}
+@keyframes pchip{0%{opacity:0;transform:translateY(-20%) scale(.6)}10%{opacity:1;transform:translateY(-50%) scale(1.12)}20%{transform:translateY(-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-90%)}}
 .dq{font-size:1.05rem;color:var(--fg)}
 .dbig .cap{font-size:.85rem;color:var(--dim)}
 .dbig .fig{font-size:2.7rem;font-weight:600;color:var(--hot);line-height:1.05;letter-spacing:-.04em;white-space:nowrap}
@@ -593,7 +596,12 @@ const B=(id,label,x={})=>Object.assign({id,label,t:"b"},x);
 const YEAROPTS=Object.keys(YEARS).map(y=>[y,YEARS[y].label]),REGIONS=[["eng","England"],["sco","Scotland"],["wal","Wales"],["ni","N. Ireland"]];
 // salary sacrifice and after-tax deductions are kept as lists in the state; here each is shown and set as one total
 const total=key=>S[key].reduce((a,it)=>a+perMonth(it),0);
-const SAC={get:()=>S.sac.length?r2(total("sac")*12):null,set:x=>{S.sac=x>0?[{name:"Salary sacrifice",amount:x,basis:"yearly"}]:[];}};
+// Salary sacrifice has a line for each common scheme and one for anything else. Each is a yearly amount, kept in the list `S.sac` under its name;
+// the last line also shows any amounts saved under other names.
+const SCHEMES=["Cycle to work","Electric car","Holiday purchase","Technology"];
+const sacLine=name=>({
+  get:()=>{const x=S.sac.filter(it=>name?it.name===name:!SCHEMES.includes(it.name)).reduce((a,it)=>a+perMonth(it)*12,0);return x?r2(x):null;},
+  set:x=>{S.sac=S.sac.filter(it=>name?it.name!==name:SCHEMES.includes(it.name));if(x>0)S.sac.push({name:name||"Other",amount:x,basis:"yearly"});}});
 const POST={get:()=>S.post.length?r2(total("post")):null,set:x=>{S.post=x>0?[{name:"Deductions after tax",amount:x,basis:"monthly"}]:[];}};
 const num=a=>({c:a});
 
@@ -610,7 +618,8 @@ const MODS=[
       N("bsValue","that amount",100,"gbp",{show:()=>S.bsType!=="none",fmtOf:()=>S.bsType==="pct"?"pct":"gbp",stepOf:()=>S.bsType==="pct"?5:100}),
       N("risePct","pay rise in the year",.5,"pct",{min:-50}),C("riseFrom","pay rise starts",()=>MONTHS.map((m,i)=>[i+1,m]))]],
     ["PENSION",[C("method","how it is taken",[["sacrifice","Salary sacrifice"],["netpay","Before tax"],["ras","After tax"]]),C("pensionMode","pension set by",[["pct","A % of salary"],["target","Take-home target"]]),
-      N("netTarget","take-home target /mo",50,"gbp",{show:()=>S.pensionMode==="target"}),N("sacYear","other sacrifice /yr",100,"gbp",SAC),N("postMonth","after-tax taken /mo",10,"gbp",POST)]]],
+      N("netTarget","take-home target /mo",50,"gbp",{show:()=>S.pensionMode==="target"}),N("postMonth","after-tax taken /mo",10,"gbp",POST)]],
+    ["SACRIFICE",SCHEMES.map((n,i)=>N("sac"+i,n.toLowerCase()+" /yr",100,"gbp",sacLine(n))).concat(N("sacOther","other /yr",100,"gbp",sacLine(null)))]],
   calc(c){
     if(!(v(S.salary)>0))return null;
     const K=c.C=compute(S),R=K.R,sum=R.sum,tax=sum("tax"),ni=sum("ni"),loan=sum("loan"),eePen=sum("pen"),bsac=sum("bsac"),emp=sum("emp"),sch=sum("sch"),post=sum("post"),penAll=eePen+bsac+emp;
@@ -627,7 +636,10 @@ const MODS=[
       S.method==="ras"?["rasNet","less Pension (after tax)"]:null,post?["post","less After-tax deductions"]:null,["net","Take-home pay",1],["emp","Employer pension"],["penTotal","Total into pension"]].filter(Boolean);
     // what the bonus adds to the year's take-home, shown under the bonus inputs
     const bonus=R.bg?[["bonus before tax",R.bg],bsac?["of it into pension",bsac]:null,["tax, NI and other deductions",R.bg-bsac-K.bonusNet],["bonus in your bank",K.bonusNet,1]].filter(Boolean):[];
-    return {big:K.typical,pct:K.pct,meter:K.net/K.gross,warn,more:{BONUS:bonus},
+    // what salary sacrifice saves: the year's take-home with it against the year's take-home without it
+    const cost=sch&&S.pensionMode!=="target"?compute(Object.assign({},S,{sac:[]})).net-K.net:null;
+    const sacRows=sch?[["sacrificed a year",sch]].concat(cost==null?[]:[["tax and NI saved",sch-cost],["off your take-home /yr",cost],["off your take-home /mo",cost/12,1]]):[];
+    return {big:K.typical,pct:K.pct,meter:K.net/K.gross,warn,more:{BONUS:bonus,SACRIFICE:sacRows},
       rows:[["income tax /mo",tax/12],["nat. insurance /mo",ni/12],["into pension /mo",penAll/12],R.bg?["bonus take-home",K.bonusNet]:loan?["student loan /mo",loan/12]:["kept of next £100",gbp(K.keep,0)],["take-home /yr",K.net]],
       tables:{MONTHS:{head:["",...MONTHS,"Total"],rows:LINES.map(([k,label,key])=>({c:[label,...R.rows.map(r=>gbp(r[k],2)),gbp(sum(k),2)],key}))}}};
   }},
@@ -889,7 +901,14 @@ function change(src,edit,what){
   for(const h of sp.hops)setTimeout(()=>land(h.b,h.a),still?0:h.at+h.ms);
   if(!still&&sp.hops.length)surge(src,sp,prev);
   for(const m of MODS)if(!seen.has(m.k)){paintTile(m);if(changed.has(m.k))flash(TILE[m.k].el);}
-  if(open)paintPage(false);
+  if(open){paintPage(false);pageBadge(prev[open],next[open]);}
+}
+// On an open page, a badge beside the main figure shows how far a change has just moved it.
+function pageBadge(a,b){
+  const fig=$("dfig"),from=a&&!a.text?a.big:0;if(!fig||!b||b.text||Math.abs(b.big-from)<.005)return;
+  const d=b.big-from,c=document.createElement("div");fig.parentNode.querySelectorAll(".pchip").forEach(e=>e.remove());
+  c.className="pchip";c.setAttribute("role","status");c.textContent=(d>=0?"+":"")+gbp(d,Math.abs(d)<100||b.dp?2:0);
+  c.style.top=fig.offsetTop+fig.offsetHeight/2+"px";fig.parentNode.appendChild(c);setTimeout(()=>c.remove(),2800);
 }
 
 // ---- movement on the map, drawn on a canvas that lies over it ----
@@ -1066,8 +1085,9 @@ function paintPage(fresh){
   if(T.fields){
     const shown=T.fields.filter(f=>!f.show||f.show());
     let h=`<div><div class="sec">${tab?T.name:"INPUT"} · TAP A FIGURE TO TYPE</div>${shown.map(f=>inputRow(f,o)).join("")}</div>`;
-    const more=tab&&m.tabs[tab][0]==="BONUS"?(o&&o.more&&o.more.BONUS)||[]:null;   // a section may show results of its own under its inputs
-    if(more)h+=`<div><div class="sec">WHAT YOU RECEIVE</div>${more.length?more.map(r=>`<div class="out${r[2]?" key":""}"><span class="k">${esc(r[0])}</span><span class="dots">${dots}</span><span class="v">${esc(gbp(r[1]))}</span></div>`).join(""):`<span class="none">Enter a bonus to see what reaches your bank.</span>`}</div>`;
+    const MORE={BONUS:["WHAT YOU RECEIVE","Enter a bonus to see what reaches your bank."],SACRIFICE:["WHAT IT SAVES","Enter an amount to see what it saves."]}[T.name];   // a section may show results of its own under its inputs
+    if(MORE){const rows=(o&&o.more&&o.more[T.name])||[];
+      h+=`<div><div class="sec">${MORE[0]}</div>${rows.length?rows.map(r=>`<div class="out${r[2]?" key":""}"><span class="k">${esc(r[0])}</span><span class="dots">${dots}</span><span class="v">${esc(gbp(r[1]))}</span></div>`).join(""):`<span class="none">${MORE[1]}</span>`}</div>`;}
     if(!tab){   // the main section also shows the results and the links to other pages
       h+=`<div><div class="sec">OUTPUT</div>${o?o.rows.filter(Boolean).map((r,i)=>`<div class="out"><span class="k">${esc(r[0])}</span><span class="dots">${dots}</span><span class="v" data-row="${i}"></span></div>`).join(""):`<span class="none">${esc(m.empty)} to see the result.</span>`}</div>`;
       const from=[...new Set(fields(m).filter(f=>LINK[f.id]).map(f=>LINK[f.id].from))],many=from.length+FEEDS[m.k].filter(k=>!from.includes(k)).length>4,link=(k,dir)=>`<button type="button" class="lnk" data-k="${k}" data-dir="${dir}" style="--z:var(--z-${BY[k].z})" aria-label="Open ${full(BY[k])}">
@@ -1131,7 +1151,7 @@ function pageClick(ev){
 NOTES.pay=["Tax is worked out month by month on the cumulative basis payroll uses, and the allowance is reduced when income is over £100,000. The main figure is a normal month, without any bonus.",
   "Salary sacrifice pension saves tax and National Insurance. Before-tax pension saves tax only. After-tax pension has 20% added by the provider; higher-rate relief on it is claimed from HMRC and is not included.",
   "Pension payments get tax relief up to the annual allowance: £60,000 a year including your employer's payments, falling for incomes over £260,000 to as little as £10,000.",
-  "A take-home target works out the pension % so each normal month pays the target. Other salary sacrifice and after-tax deductions are each entered as one total."];
+  "A take-home target works out the pension % so each normal month pays the target. Salary sacrifice schemes such as cycle to work have their own section; each is a yearly amount taken from pay before tax and National Insurance. After-tax deductions are entered as one monthly total."];
 NOTES.pot=["Until you retire, the pot grows by the growth rate with the monthly payment added each month. After that it grows with nothing added until drawdown starts. Growth is the rate left after price rises and charges, so every figure is in today's money. 2% is a cautious growth rate.",
   "Drawdown income is the pot when drawdown starts multiplied by the drawdown rate, taken every year while the rest keeps growing. Drawdown can start from the earliest age the government allows: 55, rising to 57 on 6 April 2028. It can start before you retire; the payments then carry on until you do.",
   "Tax relief limits are applied: £60,000 a year, less for incomes over £260,000, no more than your pay, and £10,000 a year once drawdown income is taken. The tax-free lump sum is the lower of 25% of the pot and £268,275.",

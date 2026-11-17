@@ -118,4 +118,4 @@ These tax rules change. Check `SD`, `DIV`, the Class 4 rates and the capital gai
 
 ## Not yet in the app
 
-Charts, and named lists for salary sacrifice and after-tax deductions (each is one total for now).
+Charts, and a named list for after-tax deductions (one monthly total for now). Salary sacrifice has a line for each common scheme (`SCHEMES`) and one for anything else, in the SACRIFICE section of Take home.

@@ -13,7 +13,7 @@ const TYPES = { ".html": "text/html", ".svg": "image/svg+xml", ".woff2": "font/w
 const SIZES = [[320, 568], [360, 560], [360, 640], [360, 700], [375, 667], [390, 664], [412, 780], [430, 800], [480, 900]];
 // every calculator filled in, at its fullest: warnings, a bonus, a lump sum, a late State Pension, long figures
 const FULL = { salary: 118000, eePct: 8, erPct: 6, bonusValue: 9000, bsType: "pct", bsValue: 20, loan: "p2", children: 2, pensionMode: "target", netTarget: 5100,
-  sac: [{ name: "Cycle to work", amount: 1200, basis: "yearly" }], post: [{ name: "Union", amount: 150, basis: "monthly" }],
+  sac: [{ name: "Cycle to work", amount: 1200, basis: "yearly" }, { name: "Electric car", amount: 6000, basis: "yearly" }, { name: "Gym", amount: 40, basis: "monthly" }], post: [{ name: "Union", amount: 150, basis: "monthly" }],
   cmpB: 131500, bgNeeds: 55, bgWants: 25, ppAge: 24, ppRetire: 60, ppPot: 1250000, ppMonthly: 8000, ppDraw: 4.5, ppDdAge: 58, spOn: true, spAge: 68, lsType: "max",
   ciStart: 125000, ciYears: 40, ciInfl: 2.5, sgTarget: 250000, sgYears: 12, mgPrice: 1450000, mgDeposit: 250000, mgRate: 5.4, mgYears: 30, mgOver: 500, sdBuyer: "extra",
   lnAmount: 25000, lnRate: 9.9, lnYears: 7, dbBalance: 12500, dbRate: 29.9, dbPay: 350, dbExtra: 100, dvMode: "director", dvDivs: 60000,
@@ -90,6 +90,7 @@ const fit = () => {
   need((await state()).salary === 42000, "the salary was not kept in the browser");
   await page.click('[data-step="salary"][data-d="1"]');
   need((await state()).salary === 43000, "the + button did not raise the salary");
+  need(await page.$eval(".pchip", (e) => /^\+£\d/.test(e.textContent)).catch(() => false), "no badge showed how far take-home moved");
   need(await page.evaluate(() => document.querySelector(".inrow input") === null && [...document.querySelectorAll(".val")].every((e) => e.tagName === "BUTTON")), "a typing field was left open");
   await openPage("budget");
   need(await page.$eval('[data-edit="bgIncome"]', (e) => e.classList.contains("carried") && e.textContent.includes("£")), "Budget did not carry the take-home figure");

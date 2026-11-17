@@ -438,3 +438,26 @@ test("Take home, bonus section: shows what the bonus adds to the bank", () => {
   near(rows[rows.length - 1][1], 720, "bonus in the bank");
   assert.equal(c2.run2({ salary: 30000 }).pay.more.BONUS.length, 0, "no rows without a bonus");
 });
+
+test("Take home, sacrifice section: named lines, and what they save", () => {
+  const c2 = vm.createContext({});
+  vm.runInContext(code + "\n;globalThis.run2=(o)=>{S=Object.assign(blank(),o);return model();};globalThis.line=(id)=>MODS[0].tabs.flatMap(t=>t[1]).find(f=>f.id===id);globalThis.state=()=>S;", c2);
+  // £30,000 with no pension and £1,200 a year of cycle to work, all in the basic rate band:
+  // 20% tax and 8% NI are saved on it, so it saves £336 and takes £864 off the year's take-home, £72 a month
+  const rows = c2.run2({ salary: 30000, eePct: 0, erPct: 0, sac: [{ name: "Cycle to work", amount: 100, basis: "monthly" }] }).pay.more.SACRIFICE;
+  near(rows[0][1], 1200, "sacrificed a year");
+  near(rows[1][1], 336, "tax and NI saved");
+  near(rows[2][1], 864, "off take-home a year");
+  near(rows[3][1], 72, "off take-home a month");
+  // each line reads and sets its own scheme and leaves the others alone; the last line holds anything else
+  near(c2.line("sac0").get(), 1200, "cycle to work line");
+  assert.equal(c2.line("sac1").get(), null, "electric car line is empty");
+  c2.line("sac1").set(6000); c2.line("sacOther").set(480);
+  near(c2.line("sac0").get(), 1200, "cycle to work unchanged");
+  near(c2.line("sac1").get(), 6000, "electric car set");
+  near(c2.line("sacOther").get(), 480, "other set");
+  c2.line("sac0").set(0);
+  assert.equal(c2.line("sac0").get(), null, "cycle to work cleared");
+  assert.equal(c2.state().sac.length, 2, "two lines left in the list");
+  assert.equal(c2.run2({ salary: 30000 }).pay.more.SACRIFICE.length, 0, "no rows without a sacrifice");
+});
